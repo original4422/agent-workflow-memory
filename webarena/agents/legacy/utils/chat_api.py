@@ -112,6 +112,8 @@ class ChatModelArgs:
         # Try to load config for this specific model
         config = _load_config(self.model_name)
 
+        print(f"Loaded config for {self.model_name}:\n {config}")
+
         if self.model_name.startswith("openai"):
             _, model_name = self.model_name.split("/")
             return ChatOpenAI(
