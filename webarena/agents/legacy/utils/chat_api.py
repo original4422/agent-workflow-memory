@@ -1,6 +1,7 @@
 from dataclasses import asdict, dataclass
 import io
 import json
+import os
 from .prompt_templates import PromptTemplate, get_prompt_template
 from langchain.schema import BaseMessage, SystemMessage, HumanMessage, AIMessage
 from functools import partial
@@ -20,6 +21,43 @@ from dataclasses import dataclass
 from huggingface_hub import InferenceClient
 from transformers import AutoTokenizer
 from transformers import GPT2TokenizerFast
+
+
+CONFIG_PATH = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "..", "config", "config.json")
+)
+
+
+def _load_config(model_name=None):
+    """Load config from config.json, optionally filtering by model_name.
+    
+    Args:
+        model_name: If provided, returns the first matching config entry.
+                   Otherwise returns the first entry in the config array.
+    
+    Returns:
+        dict: Configuration dictionary or empty dict if not found.
+    """
+    if not os.path.exists(CONFIG_PATH):
+        return {}
+
+    try:
+        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+            config_list = json.load(f)
+            if not config_list or not isinstance(config_list, list):
+                return {}
+            
+            if model_name:
+                model_provider, _ = model_name.split("/", 1)
+                for config in config_list:
+                    if config.get("model_provider") == model_provider:
+                        return config
+                return {}
+            else:
+                return config_list[0] if config_list else {}
+    except json.JSONDecodeError as e:
+        logging.warning(f"Failed to parse config file at {CONFIG_PATH}: {e}")
+        return {}
 
 
 @dataclass
@@ -71,12 +109,32 @@ class ChatModelArgs:
             raise ValueError("model_url cannot be specified when hf_hosted is True")
 
     def make_chat_model(self):
+        # Try to load config for this specific model
+        config = _load_config(self.model_name)
+
         if self.model_name.startswith("openai"):
             _, model_name = self.model_name.split("/")
             return ChatOpenAI(
                 model_name=model_name,
                 temperature=self.temperature,
                 max_tokens=self.max_new_tokens,
+            )
+        elif self.model_name.startswith(("glm/", "kimi/")):
+            _, model_name = self.model_name.split("/", 1)
+            base_url = config.get("base_url")
+            api_key = config.get("api_key")
+            
+            if not base_url:
+                raise ValueError(f"base_url is missing for {self.model_name}. Please set it in config/config.json")
+            if not api_key:
+                raise ValueError(f"api_key is missing for {self.model_name}. Please set it in config/config.json")
+
+            return ChatOpenAI(
+                model_name=model_name,
+                temperature=self.temperature,
+                max_tokens=self.max_new_tokens,
+                api_key=api_key,
+                base_url=base_url,
             )
         else:
             return HuggingFaceChatModel(
@@ -92,10 +150,12 @@ class ChatModelArgs:
 
     @property
     def model_short_name(self):
-        if "/" in self.model_name:
-            return self.model_name.split("/")[1]
+        config = _load_config(self.model_name)
+        model_name = config.get("model_name") or self.model_name
+        if "/" in model_name:
+            return model_name.split("/")[1]
         else:
-            return self.model_name
+            return model_name
 
     def key(self):
         """Return a unique key for these arguments."""
