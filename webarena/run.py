@@ -4,6 +4,7 @@ WARNING DEPRECATED WILL BE REMOVED SOON
 
 import os
 import argparse
+import importlib.resources as importlib_resources
 from pathlib import Path
 
 from browsergym.experiments import ExpArgs, EnvArgs
@@ -11,6 +12,7 @@ from browsergym.experiments import ExpArgs, EnvArgs
 from agents.legacy.agent import GenericAgentArgs
 from agents.legacy.dynamic_prompting import Flags
 from agents.legacy.utils.chat_api import ChatModelArgs
+import datetime
 
 
 def str2bool(v):
@@ -29,14 +31,18 @@ def parse_args():
     parser.add_argument(
         "--model_name",
         type=str,
-        default="openai/gpt-4o",
-        help="Model name for the chat model.",
+        default="glm/glm-4.6",
+        help="Model name for the chat model (e.g., openai/gpt-4o, glm/glm-4.6, or kimi/moonshot-v1-8k).",
     )
     parser.add_argument(
         "--task_name",
+        dest="task_name",
         type=str,
         default="openended",
-        help="Name of the Browsergym task to run. If 'openended', you need to specify a 'start_url'",
+        help=(
+            "Name of the Browsergym task to run (e.g., webarena.0). "
+            "If 'openended', you need to specify a 'start_url'"
+        ),
     )
     parser.add_argument(
         "--start_url",
@@ -108,6 +114,15 @@ def parse_args():
         default=None,
         help="Path to the memory file to load for the agent.",
     )
+    # parser.add_argument(
+    #     "--task_config_path",
+    #     type=str,
+    #     default=None,
+    #     help=(
+    #         "Optional path to a WebArena task config JSON (e.g., config_files/tests/shopping_admin_test.json). "
+    #         "When set, run.py will force WebArena to read this JSON (no env var or library edits needed)."
+    #     ),
+    # )
 
     return parser.parse_args()
 
@@ -122,6 +137,45 @@ WARNING this demo agent will soon be moved elsewhere. Expect it to be removed at
     if (args.workflow_path is not None) and (not os.path.exists(args.workflow_path)):
         open(args.workflow_path, "w").close()
 
+    # Optional: override WebArena task config without touching site-packages
+    '''
+    if args.task_config_path:
+        task_config_abs = str(Path(args.task_config_path).resolve())
+        if not os.path.exists(task_config_abs):
+            raise FileNotFoundError(f"Task config not found: {task_config_abs}")
+
+        if args.task_name.startswith("webarena."):
+            config_text = Path(task_config_abs).read_text()
+
+            _orig_files = importlib_resources.files
+
+            class _FilesShim:
+                def __init__(self, content: str):
+                    self.content = content
+
+                def joinpath(self, name):
+                    class _PathShim:
+                        def __init__(self, inner_content: str):
+                            self.inner_content = inner_content
+
+                        def read_text(self):
+                            return self.inner_content
+
+                    return _PathShim(self.content)
+
+            # Monkeypatch importlib.resources.files for the webarena package only
+            def _files_override(pkg):
+                if getattr(pkg, "__name__", None) == "webarena":
+                    return _FilesShim(config_text)
+                return _orig_files(pkg)
+
+            importlib_resources.files = _files_override
+    '''
+
+    task_kwargs = None
+    if args.task_name == "openended":
+        task_kwargs = {"start_url": args.start_url}
+
     env_args = EnvArgs(
         task_name=args.task_name,
         task_seed=None,
@@ -129,11 +183,11 @@ WARNING this demo agent will soon be moved elsewhere. Expect it to be removed at
         headless=args.headless,
         viewport={"width": 1500, "height": 1280},
         slow_mo=args.slow_mo,
+        task_kwargs=task_kwargs,
     )
 
     if args.task_name == "openended":
         env_args.wait_for_user_message = True
-        env_args.task_kwargs = {"start_url": args.start_url}
 
     exp_args = ExpArgs(
         env_args=env_args,
@@ -168,7 +222,10 @@ WARNING this demo agent will soon be moved elsewhere. Expect it to be removed at
     exp_args.prepare(Path("./results"))
     exp_args.run()
 
-    os.rename(exp_args.exp_dir, f"results/{args.task_name}")
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    result_dir = Path(f"results/{args.task_name}/{timestamp}/")
+    os.makedirs(result_dir, exist_ok=True)
+    os.rename(exp_args.exp_dir, result_dir)
 
 
 if __name__ == "__main__":
