@@ -3,16 +3,22 @@
 """
 Classify tasks using LLM and generate summary.
 
-Usage: python classify_LLM.py <input_json_file> [--model MODEL_PROVIDER] [--retry RETRY_COUNT]
+Usage: python classify_LLM.py <input_json_file> [--model_provider PROVIDER] [--model MODEL_NAME] [--retry RETRY_COUNT]
 Example: python classify_LLM.py shopping_admin.raw.json
-Example: python classify_LLM.py shopping_admin.raw.json --model kimi --retry 5
+Example: python classify_LLM.py shopping_admin.raw.json --model_provider kimi --retry 5
+Example: python classify_LLM.py shopping_admin.raw.json --model_provider kimi --model kimi-k2-thinking
 """
 
+import argparse
 import json
 import sys
 import time
 from pathlib import Path
 from openai import OpenAI
+
+# Add parent directory to path to import cloudgpt_aoai
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from cloudgpt_aoai import cloudgpt_aoai
 
 
 def load_config(model_provider="glm"):
@@ -41,30 +47,82 @@ def load_config(model_provider="glm"):
     sys.exit(1)
 
 
-def call_llm_with_retry(client, model, messages, max_retries=10):
+def call_llm_with_retry(client, model, messages, max_retries=10, stream=False, use_cloudgpt=False):
     """
     Call LLM API with retry mechanism.
 
     Args:
-        client: OpenAI client instance.
+        client: OpenAI client instance (not used when use_cloudgpt=True).
         model: Model name to use.
         messages: Messages to send to the model.
         max_retries: Maximum number of retry attempts.
+        stream: Whether to use streaming mode.
+        use_cloudgpt: Whether to use cloudgpt_aoai instead of OpenAI client.
 
     Returns:
         str: Response content from the model.
     """
     for attempt in range(max_retries):
         try:
-            response = client.chat.completions.create(
-                model=model,
-                messages=messages,
-                temperature=0.1,
-                response_format={"type": "json_object"}
-            )
-            return response.choices[0].message.content
+            if use_cloudgpt:
+                # Use cloudgpt_aoai API
+                params = {
+                    "model": model,
+                    "messages": messages,
+                    "temperature": 0.1,
+                    "response_format": {"type": "json_object"},
+                    "stream": stream
+                }
+                
+                if stream:
+                    params["stream_options"] = {"include_usage": True}
+                
+                response = cloudgpt_aoai.get_chat_completion(**params)
+                
+                if stream:
+                    # Stream mode: collect chunks and print in real-time
+                    full_response = ""
+                    for chunk in response:
+                        if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
+                            content = chunk.choices[0].delta.content
+                            print(content, end="", flush=True)
+                            full_response += content
+                    print()  # New line after stream completes
+                    return full_response
+                else:
+                    # Non-stream mode
+                    return response.choices[0].message.content
+            else:
+                # Use standard OpenAI client
+                if stream:
+                    # Stream mode: collect chunks and print in real-time
+                    response_stream = client.chat.completions.create(
+                        model=model,
+                        messages=messages,
+                        temperature=0.1,
+                        response_format={"type": "json_object"},
+                        stream=True
+                    )
+                    
+                    full_response = ""
+                    for chunk in response_stream:
+                        if chunk.choices[0].delta.content:
+                            content = chunk.choices[0].delta.content
+                            print(content, end="", flush=True)
+                            full_response += content
+                    print()  # New line after stream completes
+                    return full_response
+                else:
+                    # Non-stream mode
+                    response = client.chat.completions.create(
+                        model=model,
+                        messages=messages,
+                        temperature=0.1,
+                        response_format={"type": "json_object"}
+                    )
+                    return response.choices[0].message.content
         except Exception as e:
-            print(f"Attempt {attempt + 1}/{max_retries} failed: {e}")
+            print(f"\nAttempt {attempt + 1}/{max_retries} failed: {e}")
             if attempt < max_retries - 1:
                 wait_time = 2 ** attempt  # Exponential backoff
                 print(f"Retrying in {wait_time} seconds...")
@@ -86,18 +144,20 @@ def get_model_name(model_provider):
     """
     model_map = {
         "glm": "glm-4.5",
-        "kimi": "kimi-k2-thinking"
+        "kimi": "kimi-k2-thinking",
+        "cloudgpt": "gpt-4o"
     }
     return model_map.get(model_provider, "glm-4.5")
 
 
-def classify_tasks_with_llm(input_file, model_provider="glm", max_retries=10):
+def classify_tasks_with_llm(input_file, model_provider="glm", model=None, max_retries=10):
     """
     Classify tasks using LLM and generate summary.
 
     Args:
         input_file: Input JSON file path, e.g. "shopping_admin.raw.json".
         model_provider: Model provider name, e.g. "glm" or "kimi".
+        model: Model name to use. If None, uses default model for the provider.
         max_retries: Maximum number of retry attempts for API calls.
     """
     # Locate the script directory
@@ -123,13 +183,22 @@ def classify_tasks_with_llm(input_file, model_provider="glm", max_retries=10):
         print(f"Error: failed to parse JSON - {e}")
         sys.exit(1)
     
-    # Load API configuration
-    config = load_config(model_provider)
-    client = OpenAI(
-        api_key=config["api_key"],
-        base_url=config["base_url"]
-    )
-    model = get_model_name(model_provider)
+    # Load API configuration and initialize client
+    use_cloudgpt = (model_provider == "cloudgpt")
+    
+    if use_cloudgpt:
+        # CloudGPT doesn't need explicit config or client
+        client = None
+    else:
+        config = load_config(model_provider)
+        client = OpenAI(
+            api_key=config["api_key"],
+            base_url=config["base_url"]
+        )
+    
+    # Use custom model if provided, otherwise use default for the provider
+    if model is None:
+        model = get_model_name(model_provider)
     
     print(f"Using model provider: {model_provider}")
     print(f"Using model: {model}")
@@ -182,13 +251,11 @@ Requirements:
     print(f"User Message:\n{messages[1]['content']}\n")
     print("="*80)
     
-    print("\nCalling LLM for classification...")
-    response_content = call_llm_with_retry(client, model, messages, max_retries)
-    
+    print("\nCalling LLM for classification (streaming)...")
     print("\n" + "="*80)
-    print("LLM RESPONSE:")
+    print("LLM RESPONSE (streaming):")
     print("="*80)
-    print(response_content)
+    response_content = call_llm_with_retry(client, model, messages, max_retries, stream=True, use_cloudgpt=use_cloudgpt)
     print("="*80 + "\n")
     
     # Parse LLM response
@@ -212,9 +279,13 @@ Requirements:
         type_description = category["type_description"]
         task_ids = category["task_ids"]
         
-        type_dict[type_id] = type_description
-        
         tasks = [task_lookup[tid] for tid in task_ids if tid in task_lookup]
+        
+        type_dict[type_id] = {
+            "type_description": type_description,
+            "task_nums": len(tasks)
+        }
+        
         all_tasks.append({
             "task_nums": len(tasks),
             "type_id": type_id,
@@ -243,37 +314,57 @@ Requirements:
     print(f"Total tasks: {summary['task_nums']}")
     print(f"Total types: {summary['type_nums']}")
     print("Type descriptions:")
-    for type_id, desc in type_dict.items():
-        print(f"  Type {type_id}: {desc}")
+    for type_id, type_info in type_dict.items():
+        print(f"  Type {type_id}: {type_info['type_description']} ({type_info['task_nums']} tasks)")
 
 
 def main():
     """Entry point for CLI execution."""
-    if len(sys.argv) < 2:
-        print("Usage: python classify_LLM.py <input_json_file> [--model MODEL_PROVIDER] [--retry RETRY_COUNT]")
-        print("Example: python classify_LLM.py shopping_admin.raw.json")
-        print("Example: python classify_LLM.py shopping_admin.raw.json --model kimi --retry 5")
-        print("\nAvailable model providers: glm, kimi")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(
+        description="Classify tasks using LLM and generate summary.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python classify_LLM.py shopping_admin.raw.json
+  python classify_LLM.py shopping_admin.raw.json --model_provider kimi --retry 5
+  python classify_LLM.py shopping_admin.raw.json --model_provider kimi --model kimi-k2-thinking
+  python classify_LLM.py shopping_admin.raw.json --model_provider cloudgpt --model gpt-4o-20241120-2 --retry 3
+
+Available model providers: glm, kimi, cloudgpt
+        """
+    )
     
-    # Parse command line arguments
-    args = sys.argv[1:]
-    input_file = args[0]
-    model_provider = "glm"
-    max_retries = 10
+    parser.add_argument(
+        "input_file",
+        help="Input JSON file path, e.g. 'shopping_admin.raw.json'"
+    )
+    parser.add_argument(
+        "--model_provider",
+        default="glm",
+        choices=["glm", "kimi", "cloudgpt"],
+        help="Model provider name (default: glm)"
+    )
+    parser.add_argument(
+        "--model",
+        default=None,
+        help="Specific model name to use. If not provided, uses default model for the provider."
+    )
+    parser.add_argument(
+        "--retry",
+        type=int,
+        default=10,
+        dest="max_retries",
+        help="Maximum number of retry attempts for API calls (default: 10)"
+    )
     
-    i = 1
-    while i < len(args):
-        if args[i] == "--model" and i + 1 < len(args):
-            model_provider = args[i + 1]
-            i += 2
-        elif args[i] == "--retry" and i + 1 < len(args):
-            max_retries = int(args[i + 1])
-            i += 2
-        else:
-            i += 1
+    args = parser.parse_args()
     
-    classify_tasks_with_llm(input_file, model_provider, max_retries)
+    classify_tasks_with_llm(
+        args.input_file,
+        args.model_provider,
+        args.model,
+        args.max_retries
+    )
 
 
 if __name__ == "__main__":
