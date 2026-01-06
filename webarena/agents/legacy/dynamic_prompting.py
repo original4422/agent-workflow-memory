@@ -211,6 +211,7 @@ def fit_tokens(
             raise ValueError(f"Unrecognized type for prompt: {type(prompt)}")
         n_token = count_tokens(prompt_str, model=model_name)
         if n_token <= max_prompt_tokens:
+            print(f"Prompt fits in {n_token} tokens (max {max_prompt_tokens}).")
             return prompt
         shrinkable.shrink()
 

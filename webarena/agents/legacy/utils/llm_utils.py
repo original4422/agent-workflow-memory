@@ -177,11 +177,15 @@ def get_tokenizer(model_name="openai/gpt-4"):
     if model_name.startswith("openai"):
         return tiktoken.encoding_for_model(model_name.split("/")[-1])
     else:
-        return AutoTokenizer.from_pretrained(model_name)
+        if model_name.startswith("glm"):
+            _, model_name = model_name.split("/")
+            huggingface_model_name = f"zai-org/{model_name}"
+        return AutoTokenizer.from_pretrained(huggingface_model_name)
 
 
 def count_tokens(text, model="openai/gpt-4"):
-    enc = get_tokenizer(model)
+    # enc = get_tokenizer(model)
+    enc = get_tokenizer("openai/gpt-4")
     return len(enc.encode(text))
 
 
