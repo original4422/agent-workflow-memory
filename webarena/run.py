@@ -105,7 +105,7 @@ def parse_args():
     parser.add_argument(
         "--max_steps",
         type=int,
-        default=10,
+        default=50,
         help="Maximum number of steps to take for each task.",
     )
     parser.add_argument(
