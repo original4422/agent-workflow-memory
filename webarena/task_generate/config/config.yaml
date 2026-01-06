@@ -1,0 +1,82 @@
+# CuES-WebArena Configuration
+# Curiosity-driven Task Generation for WebArena
+
+# API Configuration
+api:
+  # API key - can be set via environment variable OPENAI_API_KEY or AZURE_OPENAI_API_KEY
+  api_key: "sk-UC1aKrCMX0Aupxcamhlx8MCKcjoLNrzwGvpBwvmjdEFoD7Wc"
+  # Model name: supports openai/gpt-4o, azure/gpt-4o, glm/glm-4.6, kimi/moonshot-v1-8k
+  model_name: "kimi/kimi-k2-thinking"
+  temperature: 0.7
+  max_tokens: 4096
+  # For Azure OpenAI
+  azure_endpoint: ""
+  api_version: "2024-02-15-preview"
+
+# Data storage directory
+data_dir: "./data"
+
+# WebArena Environment Configuration
+environment:
+  # Website to explore: shopping, shopping_admin, gitlab, reddit, map
+  website: "http://166.111.53.249:7780/admin"
+  # Specific task name (optional, e.g., webarena.0)
+  task_name: null
+  # Browser settings
+  headless: false
+  slow_mo: 30
+  viewport:
+    width: 1500
+    height: 1280
+  # Demonstration mode: adds visual effects
+  demo_mode: true
+  # Action space: bid, coord, python
+  action_space: "bid"
+  # Observation settings
+  use_html: false
+  use_ax_tree: true
+  use_screenshot: true
+
+# Stage 1 Configuration: Curious Exploration
+stage1:
+  # Number of exploration rollouts
+  rollout_num: 3
+  # Maximum steps per rollout
+  max_steps: 20
+  # Whether to use exploration memory
+  use_memory: true
+  # Memory update frequency
+  memory_update_freq: 5
+
+# Stage 2 Configuration: Task Abstraction
+stage2:
+  # Batch size for task abstraction
+  batch_size: 10
+  # Minimum confidence threshold
+  min_confidence: 0.6
+  # Minimum action sequence length
+  min_action_length: 3
+
+# Stage 3 Configuration: Trajectory Generation
+stage3:
+  # Maximum steps per trajectory
+  max_steps: 25
+  # Retry attempts for failed tasks
+  retry_attempts: 2
+  # Whether to use reflection strategy
+  use_reflection: false
+
+# Threading Configuration
+threading:
+  max_workers: 4
+  enabled: true
+
+# Query Rewrite Configuration
+rewrite:
+  batch_size: 10
+  num_variants: 3
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  file: "./logs/cues_webarena.log"
