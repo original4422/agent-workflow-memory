@@ -52,6 +52,11 @@ You must strictly follow this structure:
 
 ### 4. Writing Style Guidelines (Best Practices)
 
+* **Code Formatting (MANDATORY):** Always enclose **file names**, **paths**, **function names**, **variables**, and **code values** in backticks (```).
+* *Correct:* Update logic in `gen_prompt.py`.
+* *Incorrect:* Update logic in gen_prompt.py.
+
+
 * **Imperative Mood:** Use "Add" instead of "Added", "Fix" instead of "Fixed".
 * **Language:** Write the commit message in **English** (standard convention) unless the user explicitly asks for Chinese.
 * **Breaking Changes:** If the code change breaks backward compatibility (especially in `task_generate`), add `BREAKING CHANGE:` in the footer describing the migration path.
@@ -61,9 +66,9 @@ You must strictly follow this structure:
 ```text
 feat(task_generate): implement MVP prompt builder for WebArena
 
-- Create `gen_prompt.py` to handle initial template filling.
-- Add configuration parsing logic in `config.py`.
-- Update `README.md` to reflect new usage of the prompt builder.
+- Create `gen_prompt.py` to handle initial template filling logic.
+- Add configuration parsing in `config.py` to support dynamic `DATA_PATH`.
+- Update `README.md` to reflect the new usage of the `Builder` class.
 
 Closes #123
 
