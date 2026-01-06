@@ -1,0 +1,136 @@
+[
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 0,
+    "require_login": true,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "intent": "View the list of all recent orders.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Recent Orders",
+          "Order ID",
+          "Customer",
+          "Total",
+          "Status"
+        ],
+        "exact_match": null
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 1,
+    "require_login": true,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "intent": "Add a new product to the catalog.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Add New Product",
+          "Products"
+        ],
+        "exact_match": "Add New Product"
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 2,
+    "require_login": true,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "intent": "Find the total number of new customers this month.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "New Customers",
+          "This Month",
+          "234"
+        ],
+        "exact_match": "234"
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 3,
+    "require_login": true,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "intent": "Search for a specific product by name.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Search Products",
+          "specific product name"
+        ],
+        "exact_match": null
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 4,
+    "require_login": true,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "intent": "Generate a report of the top-selling products for 2023.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Best Selling Products",
+          "2023"
+        ],
+        "exact_match": "Impulse Duffle - 1,234 units; Overnight Duffle - 987 units; Quest Lumaflex Band - 876 units; Sprite Yoga Companion Kit - 654 units; Driven Backpack - 543 units"
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  }
+]

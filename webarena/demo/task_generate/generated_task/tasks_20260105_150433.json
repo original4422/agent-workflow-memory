@@ -1,0 +1,81 @@
+[
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 0,
+    "require_login": true,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "intent": "View the details of the recent order with Order ID 100002.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Order ID 100002",
+          "Jane Smith",
+          "$89.50",
+          "Processing"
+        ],
+        "exact_match": "Order ID 100002: Customer - Jane Smith, Total - $89.50, Status - Processing"
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 1,
+    "require_login": true,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "intent": "Add a new product to the catalog.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Add New Product"
+        ],
+        "exact_match": "Add New Product"
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 2,
+    "require_login": true,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "intent": "Generate a report for the lifetime sales and average order value.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Lifetime Sales",
+          "Average Order"
+        ],
+        "exact_match": "Lifetime Sales: $1,234,567.89, Average Order Value: $125.50"
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  }
+]

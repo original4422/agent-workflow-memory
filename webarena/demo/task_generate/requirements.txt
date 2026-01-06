@@ -1,0 +1,14 @@
+# WebArena Task Generator (CuES-Lite) Dependencies
+# ================================================
+
+# Core dependencies
+openai>=1.0.0
+requests>=2.28.0
+
+# Azure OpenAI (cloudgpt) support
+azure-identity>=1.12.0
+azure-identity-broker>=1.0.0
+
+# Optional: Better HTML parsing
+# beautifulsoup4>=4.12.0
+# lxml>=4.9.0
