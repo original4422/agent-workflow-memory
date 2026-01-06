@@ -92,7 +92,7 @@ def process_sample(
 
 def main():
     # load task config
-    task_id = args.result_dir.split('/')[-1].split(".")[1]
+    task_id = args.result_dir.split('/')[-2].split(".")[1]
     config_path = os.path.join("config_files", f"{task_id}.json")
     config = json.load(open(config_path))
 
@@ -147,7 +147,7 @@ if __name__ == "__main__":
                         help="Path to the result directory, e.g., 'webarena.0'.")
     # autoeval
     parser.add_argument("--model", type=str, default="gpt-3.5-turbo",
-                        choices=["gpt-3.5", "gpt-4", "gpt-4o"])
+                        choices=["gpt-3.5-turbo", "gpt-4", "gpt-4o", "glm-4.6"])
     parser.add_argument("--prompt", type=str, default="text",
                         choices=["text", "vision"])
 
