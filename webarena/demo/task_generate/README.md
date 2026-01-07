@@ -119,7 +119,9 @@ generated_tasks.json (Output)
 
 ## 🧪 Demo 模式说明
 
-demo 模式（`--demo`）会直接使用 `main.py` 中内置的 `DEMO_HTML` 作为输入，不读取本地文件、也不发起 URL 请求。
+demo 模式（`--demo`）会直接使用内置示例 HTML `DEMO_HTML` 作为输入（位于 `src/demo_html.py`），不读取本地文件、也不发起 URL 请求。
+
+LLM 的默认 `system` 提示词位于 `prompt/system_prompt.txt`（代码会读取该文件，缺失时自动 fallback）。
 
 - 更详细的数据流与 `DEMO_HTML` 来源说明见: [docs/DEMO_README.md](docs/DEMO_README.md)
 

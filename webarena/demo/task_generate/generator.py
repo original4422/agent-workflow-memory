@@ -38,6 +38,11 @@ from config import Config, APIConfig
 from utils import HTMLProcessor, PromptBuilder, TaskFormatter, JSONHandler
 
 
+_SYSTEM_PROMPT_PATH = os.path.join(os.path.dirname(__file__), "prompt", "system_prompt.txt")
+with open(_SYSTEM_PROMPT_PATH, "r", encoding="utf-8") as f:
+    DEFAULT_SYSTEM_PROMPT = f.read().strip()
+
+
 # ================================================================================
 # LLM client wrapper
 # ================================================================================
@@ -135,11 +140,7 @@ class LLMClient:
     @staticmethod
     def _ensure_system_message(messages: List[Dict[str, str]]) -> List[Dict[str, str]]:
         """Ensure the first message is a `system` message (OpenAI convention)."""
-        default_system = (
-            "You are a helpful assistant for a WebArena task-generation pipeline. "
-            "Follow the user's instructions exactly. "
-            "When the user requests JSON-only output, output ONLY valid JSON with no markdown fences or extra prose."
-        )
+        default_system = DEFAULT_SYSTEM_PROMPT
 
         if not messages:
             return [{"role": "system", "content": default_system}]

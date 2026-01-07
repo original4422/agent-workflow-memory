@@ -6,7 +6,7 @@
 
 `--demo` 是一种“离线演示/快速自测”模式：
 - 不需要提供真实 URL（`--url`）或本地 HTML 文件（`--file`）。
-- 程序直接使用 `main.py` 内置的 `DEMO_HTML` 字符串作为页面输入。
+- 程序直接使用 `src/demo_html.py` 中的 `DEMO_HTML` 字符串作为页面输入。
 - 后续流程（页面摘要、任务意图生成、验证/答案推断、格式化输出）与正常模式一致。
 
 ## 2. 内置示例 HTML（DEMO_HTML）从何而来？
@@ -14,7 +14,7 @@
 内置示例 HTML **不是从线上抓取**来的，也不是从某个外部数据集自动导入的。
 
 它来源于：
-- `webarena/demo/task_generate/main.py` 顶部定义的常量 `DEMO_HTML = """..."""`。
+- `webarena/demo/task_generate/src/demo_html.py` 中定义的常量 `DEMO_HTML = """..."""`。
 
 设计目的：
 - 构造一个“Magento Admin - Dashboard”风格的简化页面骨架（导航、表格、列表、输入框、按钮等），让生成器在没有真实站点的情况下，也能稳定触发意图生成逻辑。
