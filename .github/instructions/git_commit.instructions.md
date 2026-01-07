@@ -66,8 +66,8 @@ You must strictly follow this structure:
 
 * **Quote Wrapping:** When providing a CLI command (e.g., `git commit -m ...`), you **MUST** wrap the commit message in **single quotes** (`'...'`) instead of double quotes.
 * *Reason:* Double quotes allow the shell to interpret backticks (```) as command execution, which causes errors. Single quotes treat backticks as literal text.
-* *Correct:* `git commit -m 'feat: update `gen_prompt.py` logic'`
-* *Incorrect:* `git commit -m "feat: update `gen_prompt.py` logic"`
+* *Correct:* git commit -m 'feat: update `gen_prompt.py` logic'
+* *Incorrect:* git commit -m "feat: update `gen_prompt.py` logic"
 
 
 * **Internal Quotes:** If the commit message itself contains a single quote (apostrophe), escape it properly so the shell command remains valid.
