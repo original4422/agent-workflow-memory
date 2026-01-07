@@ -196,6 +196,11 @@ python main.py --stage stage1 --requirement "focus on product management feature
 
 # 提取概念集后再探索
 python main.py --stage all --extract-concepts
+
+# 运行自定义生成的 WebArena 任务 JSON（无猴子补丁）
+# 说明：使用 `webarena/run.py` 的 `--task_config_path` 读取外部 JSON，底层通过 BrowserGym 注册的 `webarena.custom` 任务执行。
+# 如果你当前就在 `webarena/` 目录下运行：
+python run.py --task_config_path demo/task_generate/generated_task/tasks_20260105_150433.json --custom_task_index 0
 ```
 
 ---
