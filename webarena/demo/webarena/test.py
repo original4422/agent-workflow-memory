@@ -7,6 +7,79 @@ import subprocess
 from pathlib import Path
 from webarena.browser_env import ScriptBrowserEnv, create_id_based_action
 
+
+def _auto_login_enabled() -> bool:
+    """Enable auto-login by default; allow disabling via AUTO_LOGIN=0/false/no."""
+    v = os.environ.get("AUTO_LOGIN", "1").strip().lower()
+    return v not in {"0", "false", "no", "off"}
+
+
+def _build_env_for_auto_login(site_list: list[str]) -> dict:
+    """Build env vars for WebArena's auto_login.
+
+    WebArena's `env_config.py` asserts *all* site URL env vars exist at import-time.
+    We only require the URLs for the sites we're actually logging into; the rest are
+    filled with harmless placeholders to satisfy the assertion.
+    """
+
+    env = dict(os.environ)
+
+    # env_config.py expects un-prefixed names, while this repo often uses WA_*.
+    mapping = {
+        "REDDIT": "WA_REDDIT",
+        "SHOPPING": "WA_SHOPPING",
+        "SHOPPING_ADMIN": "WA_SHOPPING_ADMIN",
+        "GITLAB": "WA_GITLAB",
+        "WIKIPEDIA": "WA_WIKIPEDIA",
+        "MAP": "WA_MAP",
+        "HOMEPAGE": "WA_HOMEPAGE",
+    }
+    for k, wa_k in mapping.items():
+        if not env.get(k) and env.get(wa_k):
+            env[k] = env[wa_k]
+
+    site_to_env_key = {
+        "reddit": "REDDIT",
+        "shopping": "SHOPPING",
+        "shopping_admin": "SHOPPING_ADMIN",
+        "gitlab": "GITLAB",
+    }
+    required_keys = {site_to_env_key[s] for s in site_list if s in site_to_env_key}
+    missing_required = [k for k in sorted(required_keys) if not env.get(k)]
+    if missing_required:
+        raise FileNotFoundError(
+            "auto_login requires site URL env vars for the current task. "
+            f"Missing: {missing_required}. "
+            "Set them (or set the WA_* equivalents), then rerun. "
+            "Example: export SHOPPING_ADMIN=... (or WA_SHOPPING_ADMIN=...)"
+        )
+
+    # Satisfy env_config's import-time assertion.
+    placeholder = "http://example.com"
+    for k in mapping.keys():
+        if not env.get(k):
+            env[k] = placeholder
+            print(f"[WARN] Env var {k} missing; using placeholder {placeholder} to satisfy env_config.")
+
+    return env
+
+
+def _normalize_relative_path(path_str: str) -> Path:
+    """Normalize a relative path string.
+
+    Avoid using `lstrip("./")` because it removes leading '.' characters (e.g. `.auth`).
+    We only want to remove a leading './' prefix.
+    """
+    if not isinstance(path_str, str):
+        raise TypeError(f"path_str must be a str, got: {type(path_str).__name__}")
+
+    s = path_str.strip()
+    if s.startswith("./"):
+        s = s[2:]
+    elif s.startswith(".\\"):
+        s = s[2:]
+    return Path(s)
+
 # WebArena's installed ScriptBrowserEnv expects the config file to be a single dict.
 # Many generators output a list of tasks; this helper selects one and adapts it.
 def _prepare_single_task_config(config_path: str) -> str:
@@ -59,7 +132,7 @@ def _prepare_single_task_config(config_path: str) -> str:
             storage_path = Path(storage_state)
             if not storage_path.is_absolute():
                 # Try a few common bases.
-                rel = Path(str(storage_path).lstrip("./"))
+                rel = _normalize_relative_path(storage_state)
                 base_candidates = [
                     config_file.parent,
                     Path(__file__).resolve().parent,
@@ -82,41 +155,21 @@ def _prepare_single_task_config(config_path: str) -> str:
                     target_state = (webarena_root / rel).resolve()
 
                     # If this looks like a standard .auth/*_state.json path, try to generate it.
-                    auto_login_enabled = os.environ.get("AUTO_LOGIN") in {"1", "true", "True"}
-                    if require_login and (".auth" in str(rel).split(os.sep)):
+                    is_auth_state = (".auth" in rel.parts) and rel.name.endswith("_state.json")
+                    # Some generators may forget to set `require_login=true`; treat missing .auth state as login-needed.
+                    should_attempt_auto_login = is_auth_state
+                    if should_attempt_auto_login:
                         auth_folder.mkdir(parents=True, exist_ok=True)
 
-                        # env_config.py expects un-prefixed names, while this repo's README uses WA_*.
-                        env = dict(os.environ)
-                        mapping = {
-                            "REDDIT": "WA_REDDIT",
-                            "SHOPPING": "WA_SHOPPING",
-                            "SHOPPING_ADMIN": "WA_SHOPPING_ADMIN",
-                            "GITLAB": "WA_GITLAB",
-                            "WIKIPEDIA": "WA_WIKIPEDIA",
-                            "MAP": "WA_MAP",
-                            "HOMEPAGE": "WA_HOMEPAGE",
-                        }
-                        for k, wa_k in mapping.items():
-                            if not env.get(k) and env.get(wa_k):
-                                env[k] = env[wa_k]
-
-                        missing = [k for k in mapping.keys() if not env.get(k)]
-                        if missing:
-                            raise FileNotFoundError(
-                                "storage_state not found and auto-login requires URL env vars. "
-                                f"Missing: {missing}. Set them (or set the WA_* equivalents), then rerun. "
-                                "Example: export SHOPPING_ADMIN=... (or WA_SHOPPING_ADMIN=...)"
-                            )
-
-                        if auto_login_enabled:
-                            site = rel.name.replace("_state.json", "")
+                        if _auto_login_enabled():
+                            site_list = rel.name.replace("_state.json", "").split(".")
+                            env = _build_env_for_auto_login(site_list)
                             cmd = [
                                 sys.executable,
                                 "-m",
                                 "webarena.browser_env.auto_login",
                                 "--site_list",
-                                site,
+                                *site_list,
                                 "--auth_folder",
                                 str(auth_folder),
                             ]
@@ -133,7 +186,8 @@ def _prepare_single_task_config(config_path: str) -> str:
                             raise FileNotFoundError(
                                 "storage_state file not found for a login-required task. "
                                 f"Expected something like: {target_state}. "
-                                "To generate it using WebArena's built-in script, run with AUTO_LOGIN=1."
+                                "To generate it using WebArena's built-in script, rerun with AUTO_LOGIN=1 (default). "
+                                "To disable auto-login, set AUTO_LOGIN=0."
                             )
                     else:
                         print(
