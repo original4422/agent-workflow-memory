@@ -93,11 +93,17 @@ class GenerationConfig:
     # 最大重试次数
     max_retries: int = 3
     
-    # 输出文件夹路径
+    # 输出文件夹路径（基础路径）
     output_dir: str = "./generated_task"
     
-    # 输出文件名模板 (会自动添加时间戳)
-    output_filename: str = "tasks_{timestamp}.json"
+    # 是否使用时间戳子文件夹（每次运行创建新的子文件夹）
+    use_timestamp_folder: bool = True
+    
+    # 输出文件名（tasks.json）
+    output_filename: str = "tasks.json"
+    
+    # 对话历史文件名（conversation_history.json）
+    conversation_history_filename: str = "conversation_history.json"
 
 
 @dataclass

@@ -395,15 +395,26 @@ def main():
     # 保存结果
     if tasks:
         # 创建输出文件夹
-        os.makedirs(config.generation.output_dir, exist_ok=True)
+        if config.generation.use_timestamp_folder:
+            # 使用时间戳创建子文件夹
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            output_dir = os.path.join(config.generation.output_dir, timestamp)
+        else:
+            output_dir = config.generation.output_dir
         
-        # 生成带时间戳的文件名
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = config.generation.output_filename.format(timestamp=timestamp)
-        output_path = os.path.join(config.generation.output_dir, filename)
+        os.makedirs(output_dir, exist_ok=True)
         
-        JSONHandler.save(tasks, output_path)
-        print_summary(tasks, output_path, elapsed_time)
+        # 保存tasks.json
+        tasks_filename = config.generation.output_filename
+        tasks_output_path = os.path.join(output_dir, tasks_filename)
+        JSONHandler.save(tasks, tasks_output_path)
+        
+        # 保存conversation_history.json
+        history_filename = config.generation.conversation_history_filename
+        history_output_path = os.path.join(output_dir, history_filename)
+        pipeline.save_conversation_history(history_output_path)
+        
+        print_summary(tasks, tasks_output_path, elapsed_time)
     else:
         print("\n[警告] 未能生成任何有效任务")
         print("可能的原因:")

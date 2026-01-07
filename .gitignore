@@ -6,3 +6,5 @@ webarena/autoeval/log
 
 myenv/
 webarena/config/config.json
+
+webarena/demo/task_generate/generated_task

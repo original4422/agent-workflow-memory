@@ -63,6 +63,7 @@ class LLMClient:
         """
         self.config = api_config
         self.client = None
+        self.conversation_history = []  # 记录所有对话历史
         self._init_client()
     
     def _init_client(self):
@@ -131,7 +132,19 @@ class LLMClient:
                 temperature=temperature or self.config.temperature,
                 max_tokens=max_tokens or self.config.max_tokens
             )
-            return response.choices[0].message.content.strip()
+            response_content = response.choices[0].message.content.strip()
+            
+            # 记录对话历史
+            conversation_entry = {
+                "messages": messages,
+                "response": response_content,
+                "model": self.model_name,
+                "temperature": temperature or self.config.temperature,
+                "max_tokens": max_tokens or self.config.max_tokens
+            }
+            self.conversation_history.append(conversation_entry)
+            
+            return response_content
         except Exception as e:
             print(f"[错误] LLM 请求失败: {e}")
             return ""
@@ -173,6 +186,19 @@ class LLMClient:
         
         print(f"[错误] 所有 {max_retries} 次尝试均失败")
         return ""
+    
+    def get_conversation_history(self) -> List[Dict[str, Any]]:
+        """
+        获取完整的对话历史记录
+        
+        Returns:
+            对话历史记录列表
+        """
+        return self.conversation_history
+    
+    def clear_conversation_history(self):
+        """清空对话历史记录"""
+        self.conversation_history = []
 
 
 # ================================================================================
@@ -622,6 +648,28 @@ class TaskGenerationPipeline:
             return []
         
         return self.run(html_content, num_intents, start_task_id)
+    
+    def get_conversation_history(self) -> Dict[str, Any]:
+        """
+        获取完整的对话历史记录
+        
+        Returns:
+            包含对话历史的字典
+        """
+        return {
+            "conversation_history": self.client.get_conversation_history()
+        }
+    
+    def save_conversation_history(self, output_path: str):
+        """
+        保存对话历史到JSON文件
+        
+        Args:
+            output_path: 输出文件路径
+        """
+        history_data = self.get_conversation_history()
+        JSONHandler.save(history_data, output_path)
+        print(f"[INFO] 对话历史已保存到: {output_path}")
 
 
 # ================================================================================

@@ -117,6 +117,12 @@ generated_tasks.json (Output)
 
 ## 🚀 快速开始
 
+## 🧪 Demo 模式说明
+
+demo 模式（`--demo`）会直接使用 `main.py` 中内置的 `DEMO_HTML` 作为输入，不读取本地文件、也不发起 URL 请求。
+
+- 更详细的数据流与 `DEMO_HTML` 来源说明见: [docs/DEMO_README.md](docs/DEMO_README.md)
+
 ### 环境依赖
 
 ```bash
@@ -220,11 +226,30 @@ python main.py --demo \
 
 ### 输出文件说明
 
-生成的任务文件将保存在 `generated_task/` 文件夹中，使用时间戳命名：
-- `tasks_20260105_143022.json` - 2026年1月5日 14:30:22 生成
-- `tasks_20260105_150815.json` - 2026年1月5日 15:08:15 生成
+生成的任务文件将保存在 `generated_task/` 文件夹的时间戳子文件夹中，每次运行会创建一个新的子文件夹：
 
-这样可以保留所有生成历史，便于对比和追溯。
+```
+generated_task/
+├── 20260107_143022/
+│   ├── tasks.json                      # 生成的任务列表
+│   └── conversation_history.json       # 完整的LLM对话历史记录
+├── 20260107_150815/
+│   ├── tasks.json
+│   └── conversation_history.json
+└── ...
+```
+
+**文件说明：**
+- `tasks.json`: 符合WebArena格式的任务数据
+- `conversation_history.json`: 包含所有LLM API调用的完整记录，包括：
+  - 发送的消息（messages）
+  - LLM返回的响应（response）
+  - 使用的模型参数（model, temperature, max_tokens）
+
+这样的设计保证了：
+1. 每次生成的完整可追溯性
+2. 便于调试和复现
+3. 方便对比不同生成结果
 
 ## 📁 代码结构
 
@@ -237,9 +262,15 @@ webarena/demo/task_generate/
 ├── utils.py            # 工具函数 (JSON, HTML, Prompt)
 ├── requirements.txt    # 依赖列表
 ├── README.md           # 本文档
+├── CHANGELOG/          # 变更日志
+│   └── 2026-01-07.md
 └── generated_task/     # 输出文件夹 (运行后自动创建)
-    ├── tasks_20260105_143022.json
-    └── tasks_20260105_150815.json
+    ├── 20260107_143022/
+    │   ├── tasks.json
+    │   └── conversation_history.json
+    └── 20260107_150815/
+        ├── tasks.json
+        └── conversation_history.json
 ```
 
 ### 模块说明
