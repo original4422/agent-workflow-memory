@@ -87,7 +87,11 @@ tasks = pipeline.run(
   - 默认：`generated_task/YYYYMMDD_HHMMSS/`
 - 写入两份文件：
   - `tasks.json`
-  - `conversation_history.json`（记录 LLM 调用消息与响应，用于追溯/调试）
+  - `conversation_history.json`（记录 LLM 调用 `messages` 与解析后的 JSON 响应，用于追溯/调试）
+
+补充说明（对话历史格式）：
+- `messages` 按 OpenAI chat 规范保存，为一组 `{role, content}`，role 仅包含：`system` / `user` / `assistant`。
+- `response` 会从 assistant 的 `content` 中提取并解析 JSON，落盘为结构化 JSON（而不是原始字符串）。
 
 ## 4. 如何运行 demo 模式
 

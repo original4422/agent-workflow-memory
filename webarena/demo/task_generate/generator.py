@@ -105,6 +105,100 @@ class LLMClient:
         except Exception as e:
             print(f"[ERROR] Failed to initialize OpenAI client: {e}")
             raise
+
+    @staticmethod
+    def _normalize_openai_messages(messages: List[Dict[str, Any]]) -> List[Dict[str, str]]:
+        """Normalize messages to OpenAI-compatible `{role, content}` format.
+
+        Requirement:
+        - roles must be one of: system, user, assistant
+
+        If an unexpected role appears, it is coerced into a `user` message with
+        a role prefix in the content.
+        """
+        allowed_roles = {"system", "user", "assistant"}
+        normalized: List[Dict[str, str]] = []
+
+        for msg in messages or []:
+            role = str(msg.get("role", "user"))
+            content = msg.get("content", "")
+            content_str = content if isinstance(content, str) else json.dumps(content, ensure_ascii=False)
+
+            if role not in allowed_roles:
+                content_str = f"[role={role}] {content_str}"
+                role = "user"
+
+            normalized.append({"role": role, "content": content_str})
+
+        return normalized
+
+    @staticmethod
+    def _ensure_system_message(messages: List[Dict[str, str]]) -> List[Dict[str, str]]:
+        """Ensure the first message is a `system` message (OpenAI convention)."""
+        default_system = (
+            "You are a helpful assistant for a WebArena task-generation pipeline. "
+            "Follow the user's instructions exactly. "
+            "When the user requests JSON-only output, output ONLY valid JSON with no markdown fences or extra prose."
+        )
+
+        if not messages:
+            return [{"role": "system", "content": default_system}]
+
+        if messages[0].get("role") != "system":
+            return [{"role": "system", "content": default_system}] + list(messages)
+
+        return messages
+
+    @staticmethod
+    def _build_json_fixup_user_message(parse_error: str, assistant_content: str) -> str:
+        """Build a follow-up user message when JSON parsing fails."""
+        preview = (assistant_content or "").strip().replace("\n", " ")
+        if len(preview) > 300:
+            preview = preview[:300] + "..."
+        return (
+            "Your previous response could not be parsed as JSON. "
+            f"Parse error: {parse_error}. "
+            "Please check and output ONLY valid JSON (object or array). "
+            "Do not include code fences (```), markdown, or any extra prose. "
+            f"Previous response preview: {preview}"
+        )
+
+    @staticmethod
+    def _parse_json_from_assistant_content(content: str) -> Tuple[Optional[Any], Optional[str]]:
+        """Parse JSON payload from assistant content.
+
+        The demo prompts enforce `Only output JSON`, but models sometimes wrap
+        JSON in fenced code blocks. This helper extracts and parses the JSON so
+        the conversation history stores a structured JSON value rather than a
+        raw string.
+
+        Returns:
+            (parsed_json, error_message)
+        """
+        text = (content or "").strip()
+        if not text:
+            return None, "Empty assistant content"
+
+        # Prefer fenced ```json ... ``` blocks
+        json_match = re.search(r"```json\s*([\s\S]*?)\s*```", text)
+        if json_match:
+            candidate = json_match.group(1).strip()
+        else:
+            # Fall back to a JSON object or array.
+            json_match = re.search(r"\{[\s\S]*\}", text)
+            if json_match:
+                candidate = json_match.group(0).strip()
+            else:
+                json_match = re.search(r"\[[\s\S]*\]", text)
+                if json_match:
+                    candidate = json_match.group(0).strip()
+                else:
+                    return None, "No JSON object/array found"
+
+        try:
+            return json.loads(candidate), None
+        except Exception as e:
+            return None, f"Failed to parse JSON: {e}"
     
     def chat(
         self, 
@@ -125,27 +219,62 @@ class LLMClient:
         """
         if self.client is None:
             raise RuntimeError("LLM client is not initialized")
+
+        working_messages = self._ensure_system_message(self._normalize_openai_messages(messages))
         
         try:
-            response = self.client.chat.completions.create(
-                model=self.model_name,
-                messages=messages,
-                temperature=temperature or self.config.temperature,
-                max_tokens=max_tokens or self.config.max_tokens
-            )
-            response_content = response.choices[0].message.content.strip()
-            
-            # Record conversation history
-            conversation_entry = {
-                "messages": messages,
-                "response": response_content,
-                "model": self.model_name,
-                "temperature": temperature or self.config.temperature,
-                "max_tokens": max_tokens or self.config.max_tokens
-            }
-            self.conversation_history.append(conversation_entry)
-            
-            return response_content
+            max_parse_retries = 3
+            last_response_content = ""
+            last_parse_error: Optional[str] = None
+
+            for attempt in range(max_parse_retries):
+                response = self.client.chat.completions.create(
+                    model=self.model_name,
+                    messages=working_messages,
+                    temperature=temperature or self.config.temperature,
+                    max_tokens=max_tokens or self.config.max_tokens,
+                )
+                response_content = (response.choices[0].message.content or "").strip()
+                last_response_content = response_content
+
+                assistant_message = {"role": "assistant", "content": response_content}
+                messages_with_assistant = list(working_messages) + [assistant_message]
+
+                parsed_json, parse_error = self._parse_json_from_assistant_content(response_content)
+                if parsed_json is not None:
+                    conversation_entry = {
+                        "messages": messages_with_assistant,
+                        "response": parsed_json,
+                        "model": self.model_name,
+                        "temperature": temperature or self.config.temperature,
+                        "max_tokens": max_tokens or self.config.max_tokens,
+                    }
+                    self.conversation_history.append(conversation_entry)
+                    return response_content
+
+                last_parse_error = parse_error or "Unknown parse error"
+                if attempt < max_parse_retries - 1:
+                    # Append assistant response + a new user message asking for valid JSON.
+                    working_messages = messages_with_assistant + [
+                        {
+                            "role": "user",
+                            "content": self._build_json_fixup_user_message(last_parse_error, response_content),
+                        }
+                    ]
+                else:
+                    # Final failure: still record as JSON value.
+                    conversation_entry = {
+                        "messages": messages_with_assistant,
+                        "response": {
+                            "_parse_error": last_parse_error,
+                            "_raw": response_content,
+                        },
+                        "model": self.model_name,
+                        "temperature": temperature or self.config.temperature,
+                        "max_tokens": max_tokens or self.config.max_tokens,
+                    }
+                    self.conversation_history.append(conversation_entry)
+                    return response_content
         except Exception as e:
             print(f"[ERROR] LLM request failed: {e}")
             return ""
