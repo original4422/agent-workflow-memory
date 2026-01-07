@@ -1,17 +1,18 @@
-"""
+""" 
 ================================================================================
-config.py - 配置文件
+config.py - Configuration
 ================================================================================
-这是 CuES 轻量版在 WebArena 上的配置模块。
+This module provides configuration for the CuES-lite implementation on WebArena.
 
-【CuES 设计理念映射】
-在 CuES 原始实现中，配置通过 config.yaml 管理，包含 API 设置、环境配置等。
-本模块简化为 Python dataclass，便于直接使用，无需额外的 YAML 解析依赖。
+[Mapping to CuES]
+In the original CuES implementation, configuration is managed via config.yaml
+(API settings, environment config, etc.). Here we simplify it into Python
+dataclasses for direct use without additional YAML parsing dependencies.
 
-【配置项说明】
-- API 配置: 使用 Azure OpenAI (cloudgpt) 或标准 OpenAI API
-- WebArena 配置: 目标网站的基础信息
-- 生成配置: 控制生成数量和行为
+[What is configured]
+- API: Azure OpenAI (cloudgpt) or standard OpenAI-compatible API
+- WebArena: basic target site information
+- Generation: controls the amount of generation and related behaviors
 ================================================================================
 """
 
@@ -23,26 +24,26 @@ import os
 @dataclass
 class APIConfig:
     """
-    API 配置类
-    
-    【支持的 API 类型】
-    1. Azure OpenAI (cloudgpt): 使用 azure.identity 认证
-    2. OpenAI: 使用 API Key 认证
-    3. 其他兼容 OpenAI 接口的服务
+    API configuration.
+
+    Supported API types:
+    1) Azure OpenAI (cloudgpt): authenticated via azure.identity
+    2) OpenAI: authenticated via API key
+    3) Other OpenAI-compatible services
     """
-    # API 类型: "azure" (cloudgpt) 或 "openai"
+    # API type: "azure" (cloudgpt) or "openai"
     api_type: str = "azure"
     
-    # OpenAI API Key (当 api_type="openai" 时使用)
+    # OpenAI API key (used when api_type="openai")
     openai_api_key: Optional[str] = field(default_factory=lambda: os.getenv("OPENAI_API_KEY"))
     
-    # OpenAI API Base URL (可选，用于自定义端点)
+    # OpenAI API base URL (optional, for custom endpoints)
     openai_api_base: Optional[str] = field(default_factory=lambda: os.getenv("OPENAI_API_BASE"))
     
-    # 模型名称
+    # Model name
     model_name: str = "gpt-4o-20241120-2"
     
-    # 生成参数
+    # Generation parameters
     temperature: float = 0.7
     max_tokens: int = 4096
 
@@ -50,75 +51,75 @@ class APIConfig:
 @dataclass 
 class WebArenaConfig:
     """
-    WebArena 配置类
-    
-    【字段说明】
-    - sites: 目标网站列表，如 ["shopping_admin", "reddit", "gitlab"]
-    - base_url: 网站基础 URL
-    - require_login: 是否需要登录
-    - storage_state: 登录状态存储路径
+    WebArena configuration.
+
+    Fields:
+    - sites: target site list, e.g. ["shopping_admin", "reddit", "gitlab"]
+    - base_url: base URL
+    - require_login: whether login is required
+    - storage_state: path to the stored login state
     """
-    # 目标网站
+    # Target sites
     sites: List[str] = field(default_factory=lambda: ["shopping_admin"])
     
-    # 网站基础 URL
+    # Base URL
     base_url: str = "http://166.111.53.249:7780/admin"
     
-    # 是否需要登录
+    # Whether login is required
     require_login: bool = True
     
-    # 登录状态存储路径
+    # Storage state path
     storage_state: str = "./.auth/shopping_admin_state.json"
 
 
 @dataclass
 class GenerationConfig:
     """
-    生成配置类
-    
-    【CuES 阶段映射】
-    - num_intents: 对应 CuES Stage 2 中每批次生成的任务数量
-    - num_variants: 对应 CuES Query Rewrite 中每个任务的变体数量
-    - min_confidence: 对应 CuES 的置信度过滤阈值
+    Generation configuration.
+
+    Mapping to CuES stages:
+    - num_intents: similar to the number of tasks generated per batch in CuES Stage 2
+    - num_variants: similar to the number of query rewrite variants per task
+    - min_confidence: confidence threshold used for filtering
     """
-    # 每次生成的 Intent 数量
+    # Number of intents to generate per run
     num_intents: int = 5
     
-    # 每个 Intent 的变体数量 (用于多样性)
+    # Variants per intent (for diversity)
     num_variants: int = 1
     
-    # 最低置信度阈值 (0.0-1.0)
+    # Minimum confidence threshold (0.0-1.0)
     min_confidence: float = 0.7
     
-    # 最大重试次数
+    # Maximum retries
     max_retries: int = 3
     
-    # 输出文件夹路径（基础路径）
+    # Output directory (base path)
     output_dir: str = "./generated_task"
     
-    # 是否使用时间戳子文件夹（每次运行创建新的子文件夹）
+    # Whether to create a timestamp subfolder for each run
     use_timestamp_folder: bool = True
     
-    # 输出文件名（tasks.json）
+    # Output filename (tasks.json)
     output_filename: str = "tasks.json"
     
-    # 对话历史文件名（conversation_history.json）
+    # Conversation history filename (conversation_history.json)
     conversation_history_filename: str = "conversation_history.json"
 
 
 @dataclass
 class Config:
     """
-    主配置类 - 聚合所有子配置
-    
-    【使用示例】
+    Top-level config that aggregates all sub-configs.
+
+    Example:
     ```python
     from config import Config
     
-    # 使用默认配置
+    # Use defaults
     config = Config()
     
-    # 自定义配置
+    # Customize
     config = Config(
         api=APIConfig(api_type="openai", openai_api_key="sk-xxx"),
         webarena=WebArenaConfig(sites=["shopping_admin"]),
@@ -132,11 +133,11 @@ class Config:
 
 
 # ================================================================================
-# 预定义配置模板
+# Preset configuration templates
 # ================================================================================
 
 def get_shopping_admin_config() -> Config:
-    """获取 Shopping Admin 网站的预设配置"""
+    """Get the preset config for the Shopping Admin site."""
     return Config(
         webarena=WebArenaConfig(
             sites=["shopping_admin"],
@@ -148,7 +149,7 @@ def get_shopping_admin_config() -> Config:
 
 
 def get_reddit_config() -> Config:
-    """获取 Reddit 网站的预设配置"""
+    """Get the preset config for the Reddit site."""
     return Config(
         webarena=WebArenaConfig(
             sites=["reddit"],
@@ -160,7 +161,7 @@ def get_reddit_config() -> Config:
 
 
 def get_gitlab_config() -> Config:
-    """获取 GitLab 网站的预设配置"""
+    """Get the preset config for the GitLab site."""
     return Config(
         webarena=WebArenaConfig(
             sites=["gitlab"],

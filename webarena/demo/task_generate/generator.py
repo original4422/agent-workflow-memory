@@ -1,25 +1,25 @@
 """
 ================================================================================
-generator.py - 核心生成模块
+generator.py - Core generation pipeline
 ================================================================================
-实现 CuES 思想的轻量级版本，包含完整的 Task 生成 Pipeline。
+A CuES-inspired lightweight implementation with a full task-generation pipeline.
 
-【CuES 三阶段映射】
+[Mapping to the 3 CuES stages]
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  CuES 原始流程              │  本模块简化实现                                │
+│  CuES original flow            │  This module (simplified)                  │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│  Stage 1: Triplet Gen       │  HTMLProcessor.summarize_page()               │
-│  (好奇心驱动的环境探索)       │  (静态 HTML 页面分析，提取关键信息)             │
+│  Stage 1: Triplet Gen          │  HTMLProcessor.summarize_page()            │
+│  (curiosity-driven exploration)│  (static HTML analysis, extract signals)   │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│  Stage 2: Task Abstraction  │  IntentGenerator.generate()                   │
-│  (从轨迹中抽象任务)          │  (LLM 根据页面信息生成 Intent)                 │
+│  Stage 2: Task Abstraction     │  IntentGenerator.generate()                │
+│  (abstract tasks from traces)  │  (LLM infers intents from page info)       │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│  Stage 3: Quality Control   │  AnswerAnnotator.validate_and_solve()         │
-│  (验证和答案生成)            │  (LLM 验证可执行性并推断答案)                   │
+│  Stage 3: Quality Control      │  AnswerAnnotator.validate_and_solve()      │
+│  (validation + answer gen)     │  (LLM validates + infers reference answers)│
 └─────────────────────────────────────────────────────────────────────────────┘
 
-【Pipeline 数据流】
-HTML Input → Page Summary → LLM (Intent Gen) → Intents 
+[Pipeline data flow]
+HTML Input → Page Summary → LLM (Intent Gen) → Intents
            → LLM (Validation) → Reference Answers → WebArena JSON
 ================================================================================
 """
@@ -31,7 +31,7 @@ import os
 from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass
 
-# 添加父目录到路径以导入 cloudgpt_aoai
+# Add parent dirs to import cloudgpt_aoai
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from config import Config, APIConfig
@@ -39,57 +39,58 @@ from utils import HTMLProcessor, PromptBuilder, TaskFormatter, JSONHandler
 
 
 # ================================================================================
-# LLM 客户端封装
+# LLM client wrapper
 # ================================================================================
 
 class LLMClient:
     """
-    LLM 客户端封装类
-    
-    【支持的后端】
-    1. Azure OpenAI (cloudgpt): 使用 azure.identity 认证
-    2. OpenAI: 使用标准 API Key 认证
-    
-    【CuES 对应】
-    类似于 CuES core/api_client.py 中的 DashScopeClient，但适配 Azure/OpenAI。
+    Lightweight LLM client wrapper.
+
+    Supported backends:
+    1) Azure OpenAI (cloudgpt): authenticated via azure.identity
+    2) OpenAI: authenticated via standard API key
+
+    Mapping to CuES:
+    Similar to CuES core/api_client.py (e.g., DashScopeClient), but adapted for
+    Azure/OpenAI.
     """
     
     def __init__(self, api_config: APIConfig):
         """
-        初始化 LLM 客户端
+        Initialize the LLM client.
         
         Args:
-            api_config: API 配置对象
+            api_config: API configuration object
         """
         self.config = api_config
         self.client = None
-        self.conversation_history = []  # 记录所有对话历史
+        self.conversation_history = []  # Record all requests/responses
         self._init_client()
     
     def _init_client(self):
-        """根据配置初始化对应的客户端"""
+        """Initialize the backend client based on configuration."""
         if self.config.api_type == "azure":
             self._init_azure_client()
         else:
             self._init_openai_client()
     
     def _init_azure_client(self):
-        """初始化 Azure OpenAI (cloudgpt) 客户端"""
+        """Initialize Azure OpenAI (cloudgpt) client."""
         try:
             from cloudgpt_aoai import cloudgpt_aoai
             self.client = cloudgpt_aoai.get_openai_client()
             self.model_name=self.config.model_name
-            print("[INFO] 已初始化 Azure OpenAI (cloudgpt) 客户端")
-            print(f"[INFO] 使用模型: {self.model_name}")
+            print("[INFO] Initialized Azure OpenAI (cloudgpt) client")
+            print(f"[INFO] Model: {self.model_name}")
         except ImportError:
-            print("[警告] cloudgpt_aoai 模块不可用，尝试使用 OpenAI 客户端")
+            print("[WARN] cloudgpt_aoai is unavailable; falling back to OpenAI client")
             self._init_openai_client()
         except Exception as e:
-            print(f"[错误] Azure 客户端初始化失败: {e}")
+            print(f"[ERROR] Failed to initialize Azure client: {e}")
             self._init_openai_client()
     
     def _init_openai_client(self):
-        """初始化标准 OpenAI 客户端"""
+        """Initialize standard OpenAI client."""
         try:
             from openai import OpenAI
             
@@ -98,11 +99,11 @@ class LLMClient:
                 if self.config.openai_api_base:
                     kwargs["base_url"] = self.config.openai_api_base
                 self.client = OpenAI(**kwargs)
-                print("[INFO] 已初始化 OpenAI 客户端")
+                print("[INFO] Initialized OpenAI client")
             else:
-                raise ValueError("OpenAI API Key 未设置")
+                raise ValueError("OpenAI API key is not set")
         except Exception as e:
-            print(f"[错误] OpenAI 客户端初始化失败: {e}")
+            print(f"[ERROR] Failed to initialize OpenAI client: {e}")
             raise
     
     def chat(
@@ -112,18 +113,18 @@ class LLMClient:
         max_tokens: Optional[int] = None
     ) -> str:
         """
-        发送聊天请求
+        Send a chat completion request.
         
         Args:
-            messages: 消息列表 [{"role": "user", "content": "..."}]
-            temperature: 采样温度 (可选)
-            max_tokens: 最大输出 token 数 (可选)
+            messages: Message list [{"role": "user", "content": "..."}]
+            temperature: Sampling temperature (optional)
+            max_tokens: Max output tokens (optional)
             
         Returns:
-            LLM 的响应内容
+            LLM response content
         """
         if self.client is None:
-            raise RuntimeError("LLM 客户端未正确初始化")
+            raise RuntimeError("LLM client is not initialized")
         
         try:
             response = self.client.chat.completions.create(
@@ -134,7 +135,7 @@ class LLMClient:
             )
             response_content = response.choices[0].message.content.strip()
             
-            # 记录对话历史
+            # Record conversation history
             conversation_entry = {
                 "messages": messages,
                 "response": response_content,
@@ -146,7 +147,7 @@ class LLMClient:
             
             return response_content
         except Exception as e:
-            print(f"[错误] LLM 请求失败: {e}")
+            print(f"[ERROR] LLM request failed: {e}")
             return ""
     
     def chat_with_retry(
@@ -156,18 +157,18 @@ class LLMClient:
         **kwargs
     ) -> str:
         """
-        带重试机制的聊天请求
-        
-        【CuES 对应】
-        类似于 CuES api_client.py 中的 chat_with_retry 方法。
+        Chat request with retries.
+
+        Mapping to CuES:
+        Similar to chat_with_retry in CuES api_client.py.
         
         Args:
-            messages: 消息列表
-            max_retries: 最大重试次数
-            **kwargs: 其他参数
+            messages: Message list
+            max_retries: Max retry attempts
+            **kwargs: Other parameters
             
         Returns:
-            LLM 的响应内容
+            LLM response content
         """
         import time
         
@@ -177,55 +178,56 @@ class LLMClient:
                 if result:
                     return result
             except Exception as e:
-                print(f"[警告] 第 {attempt + 1} 次尝试失败: {e}")
+                print(f"[WARN] Attempt {attempt + 1} failed: {e}")
             
             if attempt < max_retries - 1:
-                wait_time = 2 ** attempt  # 指数退避
-                print(f"[INFO] 等待 {wait_time} 秒后重试...")
+                wait_time = 2 ** attempt  # Exponential backoff
+                print(f"[INFO] Retrying in {wait_time} seconds...")
                 time.sleep(wait_time)
         
-        print(f"[错误] 所有 {max_retries} 次尝试均失败")
+        print(f"[ERROR] All {max_retries} attempts failed")
         return ""
     
     def get_conversation_history(self) -> List[Dict[str, Any]]:
         """
-        获取完整的对话历史记录
+        Get the full conversation history.
         
         Returns:
-            对话历史记录列表
+            Conversation history entries
         """
         return self.conversation_history
     
     def clear_conversation_history(self):
-        """清空对话历史记录"""
+        """Clear conversation history."""
         self.conversation_history = []
 
 
 # ================================================================================
-# Intent 生成器 (对应 CuES Stage 2: Task Abstraction)
+# Intent generator (CuES Stage 2: Task Abstraction)
 # ================================================================================
 
 class IntentGenerator:
     """
-    Intent 生成器
-    
-    【CuES 设计理念】
-    在 CuES 中，Stage 2 (Task Abstraction) 从 Agent 的交互轨迹中抽象出具体任务。
-    本模块简化为：从静态 HTML 页面信息中，由 LLM 推断可能的任务意图。
-    
-    【核心思想】
-    1. 分析页面结构和内容
-    2. 识别可执行的操作类型
-    3. 生成多样化、可验证的任务意图
+    Intent generator.
+
+    Mapping to CuES:
+    In CuES, Stage 2 (Task Abstraction) abstracts tasks from agent interaction
+    traces. Here we simplify it: infer plausible task intents from a static HTML
+    page.
+
+    Core idea:
+    1) analyze page structure/content
+    2) identify executable action types
+    3) generate diverse, verifiable intents
     """
     
     def __init__(self, client: LLMClient, config: Config):
         """
-        初始化 Intent 生成器
+        Initialize the intent generator.
         
         Args:
-            client: LLM 客户端
-            config: 配置对象
+            client: LLM client
+            config: Configuration object
         """
         self.client = client
         self.config = config
@@ -236,30 +238,30 @@ class IntentGenerator:
         num_intents: Optional[int] = None
     ) -> List[Dict[str, Any]]:
         """
-        从 HTML 内容生成任务意图
-        
-        【处理流程】
-        1. 使用 HTMLProcessor 提取页面摘要
-        2. 构造 Prompt 并调用 LLM
-        3. 解析 LLM 输出为结构化数据
+        Generate task intents from HTML.
+
+        Steps:
+        1) summarize the page via HTMLProcessor
+        2) build a prompt and call the LLM
+        3) parse the LLM output into structured data
         
         Args:
-            html_content: HTML 页面内容
-            num_intents: 要生成的 Intent 数量 (可选)
+            html_content: HTML page content
+            num_intents: Number of intents to generate (optional)
             
         Returns:
-            Intent 列表，每个 Intent 包含:
-            - intent: 任务描述
-            - task_type: 任务类型
-            - difficulty: 难度等级
-            - reasoning: 生成理由
+            A list of intents. Each intent includes:
+            - intent: task description
+            - task_type: task type
+            - difficulty: difficulty level
+            - reasoning: generation rationale
         """
-        # 1. 提取页面摘要
+        # 1) Page summary
         page_summary = HTMLProcessor.summarize_page(html_content)
-        print(f"[INFO] 页面标题: {page_summary['title']}")
-        print(f"[INFO] 识别到 {len(page_summary['interactive_elements'])} 个交互元素")
+        print(f"[INFO] Page title: {page_summary['title']}")
+        print(f"[INFO] Found {len(page_summary['interactive_elements'])} interactive elements")
         
-        # 2. 构造 Prompt
+        # 2) Prompt
         site_name = self.config.webarena.sites[0] if self.config.webarena.sites else "unknown"
         num = num_intents or self.config.generation.num_intents
         
@@ -269,44 +271,43 @@ class IntentGenerator:
             num_intents=num
         )
         
-        # 3. 调用 LLM
+        # 3) LLM call
         messages = [{"role": "user", "content": prompt}]
         response = self.client.chat_with_retry(messages)
         
-        # 4. 解析响应
+        # 4) Parse
         intents = self._parse_intents(response)
-        print(f"[INFO] 成功生成 {len(intents)} 个 Intent")
+        print(f"[INFO] Generated {len(intents)} intents")
         
         return intents
     
     def _parse_intents(self, response: str) -> List[Dict[str, Any]]:
         """
-        解析 LLM 响应，提取 Intent 列表
+        Parse LLM response into a list of intents.
         
         Args:
-            response: LLM 的原始响应
+            response: Raw LLM response
             
         Returns:
-            解析后的 Intent 列表
+            Parsed intent list
         """
         try:
-            # 尝试直接解析 JSON
-            # 首先尝试提取 ```json ... ``` 块
+            # Try parsing JSON. First, extract a ```json ...``` block.
             json_match = re.search(r'```json\s*([\s\S]*?)\s*```', response)
             if json_match:
                 json_str = json_match.group(1)
             else:
-                # 尝试找到 JSON 数组
+                # Otherwise, try to find a JSON array.
                 json_match = re.search(r'\[[\s\S]*\]', response)
                 if json_match:
                     json_str = json_match.group(0)
                 else:
-                    print(f"[警告] 无法在响应中找到 JSON: {response[:200]}...")
+                    print(f"[WARN] Could not find JSON in response: {response[:200]}...")
                     return []
             
             intents = json.loads(json_str)
             
-            # 验证格式
+            # Validate format
             valid_intents = []
             for intent in intents:
                 if isinstance(intent, dict) and "intent" in intent:
@@ -315,40 +316,41 @@ class IntentGenerator:
             return valid_intents
             
         except json.JSONDecodeError as e:
-            print(f"[错误] JSON 解析失败: {e}")
-            print(f"[DEBUG] 原始响应: {response[:500]}...")
+            print(f"[ERROR] Failed to parse JSON: {e}")
+            print(f"[DEBUG] Raw response: {response[:500]}...")
             return []
 
 
 # ================================================================================
-# 答案标注器 (对应 CuES Stage 3: Quality Control)
+# Answer annotator (CuES Stage 3: Quality Control)
 # ================================================================================
 
 class AnswerAnnotator:
     """
-    答案标注器/验证器
-    
-    【CuES 设计理念】
-    在 CuES 中，Stage 3 (Quality Control) 通过重新执行任务来验证其可执行性。
-    本模块简化为：使用 LLM 来推断任务是否可执行，并生成参考答案。
-    
-    【核心功能】
-    1. 验证 Intent 在给定页面上是否可执行
-    2. 推断任务完成后的参考答案
-    3. 确定答案的验证方式 (exact_match, must_include 等)
-    
-    【局限性说明】
-    由于没有真实的浏览器执行环境，答案是基于 LLM 推理生成的，
-    可能需要人工验证或通过实际执行来校正。
+    Answer annotator / validator.
+
+    Mapping to CuES:
+    In CuES, Stage 3 (Quality Control) re-executes tasks to validate
+    executability. Here we simplify it: use the LLM to judge executability and
+    infer reference answers.
+
+    Core responsibilities:
+    1) validate whether an intent is executable on the page
+    2) infer reference answers for evaluation
+    3) decide the evaluation type (exact_match, must_include, etc.)
+
+    Limitations:
+    Without a real browser execution environment, answers are LLM-inferred and
+    may require manual verification or correction via real execution.
     """
     
     def __init__(self, client: LLMClient, config: Config):
         """
-        初始化答案标注器
+        Initialize the annotator.
         
         Args:
-            client: LLM 客户端
-            config: 配置对象
+            client: LLM client
+            config: Configuration object
         """
         self.client = client
         self.config = config
@@ -359,30 +361,30 @@ class AnswerAnnotator:
         html_content: str
     ) -> Dict[str, Any]:
         """
-        验证 Intent 并生成参考答案
-        
-        【处理流程】
-        1. 提取页面摘要
-        2. 构造验证 Prompt
-        3. 调用 LLM 进行推理
-        4. 解析并返回结果
+        Validate an intent and generate reference answers.
+
+        Steps:
+        1) summarize the page
+        2) build a validation prompt
+        3) call the LLM
+        4) parse and return
         
         Args:
-            intent: 要验证的任务意图
-            html_content: HTML 页面内容
+            intent: Task intent to validate
+            html_content: HTML page content
             
         Returns:
-            验证结果字典，包含:
-            - is_executable: 是否可执行
-            - confidence: 置信度
-            - eval_type: 评估类型
-            - reference_answers: 参考答案
-            - reasoning: 推理过程
+            Validation result dict including:
+            - is_executable: whether executable
+            - confidence: confidence score
+            - eval_type: evaluation type
+            - reference_answers: reference answers
+            - reasoning: reasoning text
         """
-        # 1. 提取页面摘要
+        # 1) Page summary
         page_summary = HTMLProcessor.summarize_page(html_content)
         
-        # 2. 构造 Prompt
+        # 2) Prompt
         site_name = self.config.webarena.sites[0] if self.config.webarena.sites else "unknown"
         prompt = PromptBuilder.build_answer_validation_prompt(
             intent=intent,
@@ -390,11 +392,11 @@ class AnswerAnnotator:
             site_name=site_name
         )
         
-        # 3. 调用 LLM
+        # 3) LLM call
         messages = [{"role": "user", "content": prompt}]
         response = self.client.chat_with_retry(messages)
         
-        # 4. 解析响应
+        # 4) Parse
         result = self._parse_validation_result(response, intent)
         
         return result
@@ -405,14 +407,14 @@ class AnswerAnnotator:
         intent: str
     ) -> Dict[str, Any]:
         """
-        解析验证结果
+        Parse the validation result.
         
         Args:
-            response: LLM 的原始响应
-            intent: 原始 Intent (用于填充结果)
+            response: Raw LLM response
+            intent: Original intent (for filling the result)
             
         Returns:
-            解析后的验证结果
+            Parsed validation result
         """
         default_result = {
             "intent": intent,
@@ -420,11 +422,11 @@ class AnswerAnnotator:
             "confidence": 0.0,
             "eval_type": "string_match",
             "reference_answers": {},
-            "reasoning": "解析失败"
+            "reasoning": "Parse failed"
         }
         
         try:
-            # 提取 JSON
+            # Extract JSON
             json_match = re.search(r'```json\s*([\s\S]*?)\s*```', response)
             if json_match:
                 json_str = json_match.group(1)
@@ -433,13 +435,13 @@ class AnswerAnnotator:
                 if json_match:
                     json_str = json_match.group(0)
                 else:
-                    print(f"[警告] 无法解析验证结果: {response[:200]}...")
+                    print(f"[WARN] Could not parse validation result: {response[:200]}...")
                     return default_result
             
             result = json.loads(json_str)
             result["intent"] = intent
             
-            # 确保必要字段存在
+            # Ensure required fields exist
             result.setdefault("is_executable", False)
             result.setdefault("confidence", 0.0)
             result.setdefault("eval_type", "string_match")
@@ -449,7 +451,7 @@ class AnswerAnnotator:
             return result
             
         except json.JSONDecodeError as e:
-            print(f"[错误] 验证结果 JSON 解析失败: {e}")
+            print(f"[ERROR] Failed to parse validation JSON: {e}")
             return default_result
     
     def batch_validate(
@@ -458,25 +460,25 @@ class AnswerAnnotator:
         html_content: str
     ) -> List[Dict[str, Any]]:
         """
-        批量验证多个 Intent
+        Validate multiple intents in a batch.
         
         Args:
-            intents: Intent 列表
-            html_content: HTML 页面内容
+            intents: Intent list
+            html_content: HTML page content
             
         Returns:
-            验证结果列表
+            Validation result list
         """
         results = []
         total = len(intents)
         
         for i, intent_data in enumerate(intents, 1):
             intent_text = intent_data.get("intent", "")
-            print(f"[INFO] 验证 Intent ({i}/{total}): {intent_text[:50]}...")
+            print(f"[INFO] Validating intent ({i}/{total}): {intent_text[:50]}...")
             
             result = self.validate_and_solve(intent_text, html_content)
             
-            # 合并原始 Intent 数据
+            # Merge original intent fields
             result.update({
                 "task_type": intent_data.get("task_type", "query"),
                 "difficulty": intent_data.get("difficulty", "medium"),
@@ -485,42 +487,41 @@ class AnswerAnnotator:
             
             results.append(result)
             
-            # 过滤低置信度的结果
+            # Filter low-confidence results
             if result.get("confidence", 0) < self.config.generation.min_confidence:
-                print(f"    [跳过] 置信度 {result.get('confidence', 0):.2f} 低于阈值")
+                print(f"    [SKIP] Confidence {result.get('confidence', 0):.2f} is below threshold")
         
         return results
 
 
 # ================================================================================
-# 主 Pipeline (整合 Generator + Annotator + Formatter)
+# Main pipeline (Generator + Annotator + Formatter)
 # ================================================================================
 
 class TaskGenerationPipeline:
     """
-    任务生成主 Pipeline
-    
-    【CuES 设计理念整合】
-    本类整合了 CuES 的核心思想，实现了一个简化的线性 Pipeline：
+    Main task-generation pipeline.
+
+    This class integrates the key CuES ideas into a simplified linear pipeline:
     
     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
     │   HTML      │ ──> │  Generator  │ ──> │  Annotator  │ ──> │  Formatter  │
     │   Input     │     │  (Intent)   │     │  (Answer)   │     │  (JSON)     │
     └─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
     
-    【对应 CuES 阶段】
-    - HTML Input: 类似 Stage 1 的环境观察
-    - Generator: 对应 Stage 2 的 Task Abstraction
-    - Annotator: 对应 Stage 3 的 Quality Control
-    - Formatter: 输出标准化的 WebArena Task
+    Mapping to CuES stages:
+    - HTML Input: analogous to Stage 1 observation
+    - Generator: Stage 2 task abstraction
+    - Annotator: Stage 3 quality control
+    - Formatter: standardized WebArena task output
     """
     
     def __init__(self, config: Config):
         """
-        初始化 Pipeline
+        Initialize the pipeline.
         
         Args:
-            config: 配置对象
+            config: Configuration object
         """
         self.config = config
         self.client = LLMClient(config.api)
@@ -535,57 +536,57 @@ class TaskGenerationPipeline:
         start_task_id: int = 0
     ) -> List[Dict[str, Any]]:
         """
-        运行完整的任务生成 Pipeline
-        
-        【执行流程】
-        1. Intent 生成: 从 HTML 中提取可能的任务意图
-        2. 答案验证: 验证每个 Intent 并生成参考答案
-        3. 格式化: 将结果转换为 WebArena JSON 格式
-        4. 过滤: 移除低置信度的任务
+        Run the full task-generation pipeline.
+
+        Steps:
+        1) intent generation
+        2) answer validation / reference-answer inference
+        3) formatting into WebArena JSON
+        4) filtering by confidence
         
         Args:
-            html_content: HTML 页面内容
-            num_intents: 要生成的 Intent 数量 (可选)
-            start_task_id: 起始任务 ID
+            html_content: HTML page content
+            num_intents: Number of intents to generate (optional)
+            start_task_id: Starting task ID
             
         Returns:
-            WebArena 格式的任务列表
+            WebArena-formatted task list
         """
         print("=" * 60)
-        print("【阶段 1】Intent 生成 (对应 CuES Stage 2: Task Abstraction)")
+        print("[Stage 1] Intent generation (CuES Stage 2: Task Abstraction)")
         print("=" * 60)
         
-        # 1. 生成 Intent
+        # 1. Generate intents
         intents = self.generator.generate(html_content, num_intents)
         
         if not intents:
-            print("[错误] 未能生成任何 Intent")
+            print("[ERROR] No intents were generated")
             return []
         
         print("\n" + "=" * 60)
-        print("【阶段 2】答案验证 (对应 CuES Stage 3: Quality Control)")
+        print("[Stage 2] Answer validation (CuES Stage 3: Quality Control)")
         print("=" * 60)
         
-        # 2. 验证并生成答案
+        # 2. Validate and infer reference answers
         validated_results = self.annotator.batch_validate(intents, html_content)
         
-        # 3. 过滤低置信度结果
+        # 3. Filter low-confidence results
         min_conf = self.config.generation.min_confidence
         filtered_results = [
             r for r in validated_results 
             if r.get("is_executable", False) and r.get("confidence", 0) >= min_conf
         ]
         
-        print(f"\n[INFO] 过滤后保留 {len(filtered_results)}/{len(validated_results)} 个任务")
+        print(f"\n[INFO] Kept {len(filtered_results)}/{len(validated_results)} tasks after filtering")
         
         print("\n" + "=" * 60)
-        print("【阶段 3】格式化输出 (WebArena JSON)")
+        print("[Stage 3] Format output (WebArena JSON)")
         print("=" * 60)
         
-        # 4. 格式化为 WebArena 任务
+        # 4. Format into WebArena tasks
         tasks = self.formatter.format_tasks(filtered_results, start_task_id)
         
-        print(f"[INFO] 成功生成 {len(tasks)} 个 WebArena 任务")
+        print(f"[INFO] Generated {len(tasks)} WebArena tasks")
         
         return tasks
     
@@ -596,26 +597,26 @@ class TaskGenerationPipeline:
         start_task_id: int = 0
     ) -> List[Dict[str, Any]]:
         """
-        从 URL 获取页面并生成任务
+        Fetch a page from URL and generate tasks.
         
         Args:
-            url: 目标页面 URL
-            num_intents: 要生成的 Intent 数量 (可选)
-            start_task_id: 起始任务 ID
+            url: Target page URL
+            num_intents: Number of intents to generate (optional)
+            start_task_id: Starting task ID
             
         Returns:
-            WebArena 格式的任务列表
+            WebArena-formatted task list
         """
-        print(f"[INFO] 正在获取页面: {url}")
+        print(f"[INFO] Fetching page: {url}")
         
         try:
             import requests
             response = requests.get(url, timeout=30)
             response.raise_for_status()
             html_content = response.text
-            print(f"[INFO] 成功获取页面，大小: {len(html_content)} 字节")
+            print(f"[INFO] Page fetched, size: {len(html_content)} bytes")
         except Exception as e:
-            print(f"[错误] 获取页面失败: {e}")
+            print(f"[ERROR] Failed to fetch page: {e}")
             return []
         
         return self.run(html_content, num_intents, start_task_id)
@@ -627,34 +628,34 @@ class TaskGenerationPipeline:
         start_task_id: int = 0
     ) -> List[Dict[str, Any]]:
         """
-        从本地 HTML 文件生成任务
+        Load a local HTML file and generate tasks.
         
         Args:
-            file_path: HTML 文件路径
-            num_intents: 要生成的 Intent 数量 (可选)
-            start_task_id: 起始任务 ID
+            file_path: HTML file path
+            num_intents: Number of intents to generate (optional)
+            start_task_id: Starting task ID
             
         Returns:
-            WebArena 格式的任务列表
+            WebArena-formatted task list
         """
-        print(f"[INFO] 正在读取文件: {file_path}")
+        print(f"[INFO] Reading file: {file_path}")
         
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 html_content = f.read()
-            print(f"[INFO] 成功读取文件，大小: {len(html_content)} 字节")
+            print(f"[INFO] File read, size: {len(html_content)} bytes")
         except Exception as e:
-            print(f"[错误] 读取文件失败: {e}")
+            print(f"[ERROR] Failed to read file: {e}")
             return []
         
         return self.run(html_content, num_intents, start_task_id)
     
     def get_conversation_history(self) -> Dict[str, Any]:
         """
-        获取完整的对话历史记录
+        Get full conversation history.
         
         Returns:
-            包含对话历史的字典
+            Dict containing conversation history
         """
         return {
             "conversation_history": self.client.get_conversation_history()
@@ -662,18 +663,18 @@ class TaskGenerationPipeline:
     
     def save_conversation_history(self, output_path: str):
         """
-        保存对话历史到JSON文件
+        Save conversation history to a JSON file.
         
         Args:
-            output_path: 输出文件路径
+            output_path: Output file path
         """
         history_data = self.get_conversation_history()
         JSONHandler.save(history_data, output_path)
-        print(f"[INFO] 对话历史已保存到: {output_path}")
+        print(f"[INFO] Conversation history saved to: {output_path}")
 
 
 # ================================================================================
-# 便捷函数
+# Convenience functions
 # ================================================================================
 
 def generate_tasks_from_html(
@@ -682,15 +683,15 @@ def generate_tasks_from_html(
     num_intents: int = 5
 ) -> List[Dict[str, Any]]:
     """
-    便捷函数：从 HTML 内容直接生成任务
+    Convenience: generate tasks directly from HTML content.
     
     Args:
-        html_content: HTML 页面内容
-        config: 配置对象 (可选)
-        num_intents: 要生成的 Intent 数量
+        html_content: HTML page content
+        config: Configuration object (optional)
+        num_intents: Number of intents to generate
         
     Returns:
-        WebArena 格式的任务列表
+        WebArena-formatted task list
     """
     config = config or Config()
     pipeline = TaskGenerationPipeline(config)
@@ -703,15 +704,15 @@ def generate_tasks_from_url(
     num_intents: int = 5
 ) -> List[Dict[str, Any]]:
     """
-    便捷函数：从 URL 直接生成任务
+    Convenience: generate tasks directly from a URL.
     
     Args:
-        url: 目标页面 URL
-        config: 配置对象 (可选)
-        num_intents: 要生成的 Intent 数量
+        url: Target page URL
+        config: Configuration object (optional)
+        num_intents: Number of intents to generate
         
     Returns:
-        WebArena 格式的任务列表
+        WebArena-formatted task list
     """
     config = config or Config()
     pipeline = TaskGenerationPipeline(config)

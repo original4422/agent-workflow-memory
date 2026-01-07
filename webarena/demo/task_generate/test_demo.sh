@@ -1,25 +1,25 @@
 #!/bin/bash
 
-# 演示脚本 - 测试时间戳命名功能
+# Demo script - test timestamped output folder
 
 echo "================================"
-echo "WebArena Task Generator 测试"
+echo "WebArena Task Generator Test"
 echo "================================"
 echo ""
 
 cd "$(dirname "$0")"
 
-echo "测试 1: 使用 --demo 模式生成任务"
-echo "输出将保存到 ./generated_task/ 文件夹，文件名包含时间戳"
+echo "Test 1: generate tasks in --demo mode"
+echo "Output will be saved under ./generated_task/ (timestamped subfolder)"
 echo ""
 
 python main.py --demo --num-intents 3
 
 echo ""
 echo "================================"
-echo "查看生成的文件:"
+echo "Generated files:"
 echo "================================"
 ls -lh generated_task/
 
 echo ""
-echo "完成！生成的任务文件位于 generated_task/ 文件夹中"
+echo "Done! Generated task files are under generated_task/"

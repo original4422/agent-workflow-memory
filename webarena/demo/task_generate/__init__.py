@@ -1,18 +1,19 @@
-"""
+""" 
 WebArena Task Generator (CuES-Lite)
-====================================
+===================================
 
-基于 CuES 方法的轻量级实现，自动生成符合 WebArena 格式的 Task 数据。
+A CuES-inspired lightweight implementation that generates WebArena-format task
+data.
 
-【模块导出】
-- Config: 配置类
-- TaskGenerationPipeline: 主 Pipeline
-- IntentGenerator: Intent 生成器
-- AnswerAnnotator: 答案标注器
-- generate_tasks_from_html: 便捷函数
-- generate_tasks_from_url: 便捷函数
+Exports:
+- Config: configuration container
+- TaskGenerationPipeline: main pipeline
+- IntentGenerator: intent generator
+- AnswerAnnotator: answer annotator/validator
+- generate_tasks_from_html: convenience helper
+- generate_tasks_from_url: convenience helper
 
-【使用示例】
+Example:
 ```python
 from task_generate import Config, TaskGenerationPipeline
 

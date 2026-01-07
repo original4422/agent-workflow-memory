@@ -1,25 +1,27 @@
 #!/usr/bin/env python3
-"""
+""" 
 ================================================================================
-main.py - WebArena 任务自动生成工具
+main.py - WebArena Task Generator
 ================================================================================
-基于 CuES (Curiosity-driven and Environment-grounded Synthesis) 方法的轻量级实现。
+A lightweight implementation inspired by CuES (Curiosity-driven and
+Environment-grounded Synthesis).
 
-【功能概述】
-从给定的网页 (URL 或 HTML 文件) 自动生成符合 WebArena 格式的 Task 数据。
+[Overview]
+Generate WebArena-format tasks from a web page (URL) or an HTML file.
 
-【使用方式】
-1. 从 URL 生成:
-   python main.py --url "http://example.com/admin"
+[Usage]
+1) Generate from URL:
+    python main.py --url "http://example.com/admin"
 
-2. 从 HTML 文件生成:
-   python main.py --file "./sample.html"
+2) Generate from local HTML:
+    python main.py --file "./sample.html"
 
-3. 使用示例 HTML (演示模式):
-   python main.py --demo
+3) Demo mode (built-in HTML):
+    python main.py --demo
 
-【输出】
-生成的任务将保存到 ./generated_tasks.json
+[Output]
+Outputs are saved under `./generated_task/` (optionally with a timestamp
+subfolder), typically including `tasks.json` and `conversation_history.json`.
 ================================================================================
 """
 
@@ -28,7 +30,7 @@ import sys
 import os
 from datetime import datetime
 
-# 确保可以导入本地模块
+# Ensure local modules are importable
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from config import Config, APIConfig, WebArenaConfig, GenerationConfig
@@ -37,7 +39,7 @@ from utils import JSONHandler
 
 
 # ================================================================================
-# 示例 HTML (用于演示模式)
+# Demo HTML (for --demo)
 # ================================================================================
 
 DEMO_HTML = """
@@ -116,112 +118,112 @@ DEMO_HTML = """
 
 
 def parse_args():
-    """解析命令行参数"""
+    """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
-        description="WebArena 任务自动生成工具 (基于 CuES 方法)",
+        description="WebArena Task Generator (CuES-Lite)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-示例:
-  # 演示模式 (使用内置示例 HTML)
+Examples:
+  # Demo mode (built-in HTML)
   python main.py --demo
 
-  # 从 URL 生成任务
+  # Generate tasks from a URL
   python main.py --url "http://166.111.53.249:7780/admin"
 
-  # 从本地 HTML 文件生成
+  # Generate from a local HTML file
   python main.py --file "./page.html"
 
-  # 自定义生成数量和输出文件夹
+  # Customize count and output directory
   python main.py --demo --num-intents 10 --output-dir "./my_tasks"
 
-  # 使用 OpenAI API
+  # Use OpenAI API
   python main.py --demo --api-type openai --api-key "sk-xxx"
         """
     )
     
-    # 输入源 (互斥)
+    # Input source (mutually exclusive)
     input_group = parser.add_mutually_exclusive_group(required=True)
     input_group.add_argument(
         "--url",
         type=str,
-        help="目标网页 URL"
+        help="Target page URL"
     )
     input_group.add_argument(
         "--file",
         type=str,
-        help="本地 HTML 文件路径"
+        help="Path to a local HTML file"
     )
     input_group.add_argument(
         "--demo",
         action="store_true",
-        help="使用内置示例 HTML (演示模式)"
+        help="Use built-in sample HTML (demo mode)"
     )
     
-    # 生成配置
+    # Generation settings
     parser.add_argument(
         "--num-intents",
         type=int,
         default=5,
-        help="生成的任务数量 (默认: 5)"
+        help="Number of tasks to generate (default: 5)"
     )
     parser.add_argument(
         "--min-confidence",
         type=float,
         default=0.7,
-        help="最低置信度阈值 (默认: 0.7)"
+        help="Minimum confidence threshold (default: 0.7)"
     )
     parser.add_argument(
         "--output-dir",
         type=str,
         default="./generated_task",
-        help="输出文件夹路径 (默认: ./generated_task)"
+        help="Output directory (default: ./generated_task)"
     )
     
-    # WebArena 配置
+    # WebArena settings
     parser.add_argument(
         "--site",
         type=str,
         default="shopping_admin",
-        help="目标网站类型 (默认: shopping_admin)"
+        help="Target site name (default: shopping_admin)"
     )
     parser.add_argument(
         "--start-url",
         type=str,
         default="http://166.111.53.249:7780/admin",
-        help="任务起始 URL"
+        help="Task start URL"
     )
     
-    # API 配置
+    # API settings
     parser.add_argument(
         "--api-type",
         type=str,
         choices=["azure", "openai"],
         default="azure",
-        help="API 类型: azure (cloudgpt) 或 openai (默认: azure)"
+        help="API type: azure (cloudgpt) or openai (default: azure)"
     )
     parser.add_argument(
         "--api-key",
         type=str,
-        help="OpenAI API Key (当 --api-type=openai 时需要)"
+        help="OpenAI API key (required when --api-type=openai)"
     )
     parser.add_argument(
         "--model",
         type=str,
         default="gpt-4o-20241120-2",
-        help="模型名称 (默认: gpt-4o-20241120-2)"
+        help="Model name (default: gpt-4o-20241120-2)"
     )
     
-    # 其他选项
+    # Other options
     parser.add_argument(
         "--verbose",
         action="store_true",
-        help="显示详细输出"
+        help="Show verbose output"
     )
     parser.add_argument(
         "--start-id",
         type=int,
         default=0,
-        help="起始任务 ID (默认: 0)"
+        help="Starting task ID (default: 0)"
     )
     
     return parser.parse_args()
@@ -229,28 +231,28 @@ def parse_args():
 
 def build_config(args) -> Config:
     """
-    根据命令行参数构建配置对象
-    
+    Build Config from CLI arguments.
+
     Args:
-        args: 解析后的命令行参数
-        
+        args: Parsed CLI args
+
     Returns:
-        Config 对象
+        Config
     """
-    # API 配置
+    # API
     api_config = APIConfig(
         api_type=args.api_type,
         openai_api_key=args.api_key,
         model_name=args.model
     )
     
-    # WebArena 配置
+    # WebArena
     webarena_config = WebArenaConfig(
         sites=[args.site],
         base_url=args.start_url
     )
     
-    # 生成配置
+    # Generation
     generation_config = GenerationConfig(
         num_intents=args.num_intents,
         min_confidence=args.min_confidence,
@@ -266,69 +268,69 @@ def build_config(args) -> Config:
 
 def get_html_content(args) -> str:
     """
-    根据输入源获取 HTML 内容
-    
+    Get HTML content based on the selected input source.
+
     Args:
-        args: 解析后的命令行参数
-        
+        args: Parsed CLI args
+
     Returns:
-        HTML 内容字符串
+        HTML content string
     """
     if args.demo:
-        print("[INFO] 使用内置示例 HTML (演示模式)")
+        print("[INFO] Using built-in sample HTML (demo mode)")
         return DEMO_HTML
     
     elif args.file:
-        print(f"[INFO] 从文件读取: {args.file}")
+        print(f"[INFO] Reading from file: {args.file}")
         try:
             with open(args.file, 'r', encoding='utf-8') as f:
                 return f.read()
         except FileNotFoundError:
-            print(f"[错误] 文件不存在: {args.file}")
+            print(f"[ERROR] File not found: {args.file}")
             sys.exit(1)
         except Exception as e:
-            print(f"[错误] 读取文件失败: {e}")
+            print(f"[ERROR] Failed to read file: {e}")
             sys.exit(1)
     
     elif args.url:
-        print(f"[INFO] 从 URL 获取: {args.url}")
+        print(f"[INFO] Fetching from URL: {args.url}")
         try:
             import requests
             response = requests.get(args.url, timeout=30)
             response.raise_for_status()
             return response.text
         except Exception as e:
-            print(f"[错误] 获取 URL 失败: {e}")
+            print(f"[ERROR] Failed to fetch URL: {e}")
             sys.exit(1)
     
     return ""
 
 
 def print_banner():
-    """打印程序横幅"""
+    """Print a banner."""
     print("""
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║                                                                              ║
 ║           WebArena Task Generator (CuES-Lite)                                ║
 ║                                                                              ║
-║    基于 CuES 方法的轻量级实现，自动生成 WebArena 格式的任务数据              ║
+║    A lightweight CuES-inspired tool to generate WebArena-format tasks         ║
 ║                                                                              ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
     """)
 
 
 def print_summary(tasks, output_file, elapsed_time):
-    """打印生成摘要"""
+    """Print a run summary."""
     print("\n" + "=" * 60)
-    print("【生成完成】")
+    print("[Done]")
     print("=" * 60)
-    print(f"  ✅ 生成任务数: {len(tasks)}")
-    print(f"  📄 输出文件: {output_file}")
-    print(f"  ⏱️  耗时: {elapsed_time:.2f} 秒")
+    print(f"  Tasks generated: {len(tasks)}")
+    print(f"  Output file: {output_file}")
+    print(f"  Elapsed: {elapsed_time:.2f} seconds")
     print()
     
     if tasks:
-        print("【生成的任务预览】")
+        print("[Preview]")
         print("-" * 60)
         for i, task in enumerate(tasks[:3], 1):
             intent = task.get("intent", "N/A")
@@ -336,45 +338,45 @@ def print_summary(tasks, output_file, elapsed_time):
                 intent = intent[:57] + "..."
             print(f"  {i}. {intent}")
         if len(tasks) > 3:
-            print(f"  ... 还有 {len(tasks) - 3} 个任务")
+            print(f"  ... and {len(tasks) - 3} more")
         print()
 
 
 def main():
-    """主函数"""
-    # 解析参数
+    """Main entry point."""
+    # Parse args
     args = parse_args()
     
-    # 打印横幅
+    # Banner
     print_banner()
     
-    # 构建配置
+    # Config
     config = build_config(args)
     
-    # 显示配置信息
-    print("【配置信息】")
-    print(f"  API 类型: {config.api.api_type}")
-    print(f"  模型: {config.api.model_name}")
-    print(f"  目标网站: {config.webarena.sites}")
-    print(f"  生成数量: {config.generation.num_intents}")
-    print(f"  置信度阈值: {config.generation.min_confidence}")
+    # Show config
+    print("[Config]")
+    print(f"  API type: {config.api.api_type}")
+    print(f"  Model: {config.api.model_name}")
+    print(f"  Sites: {config.webarena.sites}")
+    print(f"  Num intents: {config.generation.num_intents}")
+    print(f"  Min confidence: {config.generation.min_confidence}")
     print()
     
-    # 获取 HTML 内容
+    # Get HTML
     html_content = get_html_content(args)
     
     if not html_content:
-        print("[错误] 未能获取 HTML 内容")
+        print("[ERROR] Failed to get HTML content")
         sys.exit(1)
     
-    print(f"[INFO] HTML 内容大小: {len(html_content)} 字节")
+    print(f"[INFO] HTML size: {len(html_content)} bytes")
     print()
     
-    # 开始计时
+    # Timer
     import time
     start_time = time.time()
     
-    # 创建 Pipeline 并运行
+    # Run pipeline
     try:
         pipeline = TaskGenerationPipeline(config)
         tasks = pipeline.run(
@@ -383,20 +385,20 @@ def main():
             start_task_id=args.start_id
         )
     except Exception as e:
-        print(f"\n[错误] Pipeline 执行失败: {e}")
+        print(f"\n[ERROR] Pipeline failed: {e}")
         if args.verbose:
             import traceback
             traceback.print_exc()
         sys.exit(1)
     
-    # 计算耗时
+    # Elapsed
     elapsed_time = time.time() - start_time
     
-    # 保存结果
+    # Save
     if tasks:
-        # 创建输出文件夹
+        # Create output directory
         if config.generation.use_timestamp_folder:
-            # 使用时间戳创建子文件夹
+            # Timestamp subfolder
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             output_dir = os.path.join(config.generation.output_dir, timestamp)
         else:
@@ -404,23 +406,23 @@ def main():
         
         os.makedirs(output_dir, exist_ok=True)
         
-        # 保存tasks.json
+        # Save tasks.json
         tasks_filename = config.generation.output_filename
         tasks_output_path = os.path.join(output_dir, tasks_filename)
         JSONHandler.save(tasks, tasks_output_path)
         
-        # 保存conversation_history.json
+        # Save conversation_history.json
         history_filename = config.generation.conversation_history_filename
         history_output_path = os.path.join(output_dir, history_filename)
         pipeline.save_conversation_history(history_output_path)
         
         print_summary(tasks, tasks_output_path, elapsed_time)
     else:
-        print("\n[警告] 未能生成任何有效任务")
-        print("可能的原因:")
-        print("  1. HTML 内容不足以推断任务")
-        print("  2. 生成的任务置信度过低")
-        print("  3. LLM API 调用失败")
+        print("\n[WARN] No valid tasks were generated")
+        print("Possible reasons:")
+        print("  1) HTML content is insufficient to infer tasks")
+        print("  2) Generated tasks have low confidence")
+        print("  3) LLM API call failed")
     
     return 0 if tasks else 1
 

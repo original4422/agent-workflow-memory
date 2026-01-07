@@ -1,13 +1,13 @@
 """
 ================================================================================
-utils.py - 工具函数模块
+utils.py - Utility helpers
 ================================================================================
-提供 JSON 读写、Prompt 构造、HTML 处理等通用工具函数。
+Common utilities for JSON IO, prompt construction, and HTML processing.
 
-【CuES 设计理念映射】
-- PromptBuilder: 对应 CuES prompts/ 目录下的各种 Prompt 构造器
-- JSONHandler: 对应 CuES data/storage.py 中的数据持久化逻辑
-- HTMLProcessor: 简化版的环境状态提取器
+[Mapping to CuES]
+- PromptBuilder: similar to the prompt builders under CuES prompts/
+- JSONHandler: similar to the persistence logic in CuES data/storage.py
+- HTMLProcessor: simplified environment state extractor for static HTML
 ================================================================================
 """
 
@@ -18,73 +18,73 @@ from dataclasses import dataclass, asdict
 
 
 # ================================================================================
-# JSON 处理工具
+# JSON utilities
 # ================================================================================
 
 class JSONHandler:
     """
-    JSON 文件读写处理器
-    
-    【功能说明】
-    - 读取现有任务配置文件
-    - 保存生成的任务到 JSON 文件
-    - 支持增量追加模式
+    JSON file reader/writer.
+
+    Features:
+    - load an existing task file
+    - save generated tasks to JSON
+    - support append mode
     """
     
     @staticmethod
     def load(filepath: str) -> List[Dict[str, Any]]:
         """
-        加载 JSON 文件
+        Load a JSON file.
         
         Args:
-            filepath: JSON 文件路径
+            filepath: Path to the JSON file
             
         Returns:
-            解析后的数据列表
+            Parsed data list
         """
         try:
             with open(filepath, 'r', encoding='utf-8') as f:
                 data = json.load(f)
                 return data if isinstance(data, list) else [data]
         except FileNotFoundError:
-            print(f"[警告] 文件不存在: {filepath}")
+            print(f"[WARN] File not found: {filepath}")
             return []
         except json.JSONDecodeError as e:
-            print(f"[错误] JSON 解析失败: {e}")
+            print(f"[ERROR] Failed to parse JSON: {e}")
             return []
     
     @staticmethod
     def save(data: List[Dict[str, Any]], filepath: str, indent: int = 2) -> bool:
         """
-        保存数据到 JSON 文件
+        Save data to a JSON file.
         
         Args:
-            data: 要保存的数据
-            filepath: 目标文件路径
-            indent: 缩进空格数
+            data: Data to save
+            filepath: Target file path
+            indent: Indentation spaces
             
         Returns:
-            是否保存成功
+            True if saved successfully
         """
         try:
             with open(filepath, 'w', encoding='utf-8') as f:
                 json.dump(data, f, ensure_ascii=False, indent=indent)
             return True
         except Exception as e:
-            print(f"[错误] 保存文件失败: {e}")
+            print(f"[ERROR] Failed to save file: {e}")
             return False
     
     @staticmethod
     def append(task: Dict[str, Any], filepath: str) -> bool:
         """
-        追加单个任务到现有 JSON 文件
+        Append a single task to an existing JSON file.
         
         Args:
-            task: 要追加的任务
-            filepath: 目标文件路径
+            task: Task to append
+            filepath: Target file path
             
         Returns:
-            是否追加成功
+            True if appended successfully
         """
         existing = JSONHandler.load(filepath)
         existing.append(task)
@@ -92,43 +92,44 @@ class JSONHandler:
 
 
 # ================================================================================
-# HTML 处理工具
+# HTML utilities
 # ================================================================================
 
 class HTMLProcessor:
     """
-    HTML 内容处理器
-    
-    【功能说明】
-    从 HTML 中提取关键信息，为 LLM 提供结构化的页面描述。
-    
-    【CuES 对应】
-    类似于 CuES Stage 1 中的环境状态观察，但简化为静态 HTML 解析。
+    HTML content processor.
+
+    Extracts key information from HTML to provide a structured page description
+    to the LLM.
+
+    Mapping to CuES:
+    Similar to environment observation in CuES Stage 1, but simplified to static
+    HTML parsing.
     """
     
     @staticmethod
     def extract_text(html: str, max_length: int = 4000) -> str:
         """
-        从 HTML 中提取纯文本内容
+        Extract plain text content from HTML.
         
         Args:
-            html: HTML 字符串
-            max_length: 最大返回长度
+            html: HTML string
+            max_length: Max return length
             
         Returns:
-            提取的文本内容
+            Extracted text content
         """
-        # 移除 script 和 style 标签及其内容
+        # Remove script/style tags and their contents
         html = re.sub(r'<script[^>]*>.*?</script>', '', html, flags=re.DOTALL | re.IGNORECASE)
         html = re.sub(r'<style[^>]*>.*?</style>', '', html, flags=re.DOTALL | re.IGNORECASE)
         
-        # 移除所有 HTML 标签
+        # Remove all HTML tags
         text = re.sub(r'<[^>]+>', ' ', html)
         
-        # 清理多余空白
+        # Normalize whitespace
         text = re.sub(r'\s+', ' ', text).strip()
         
-        # 截断到最大长度
+        # Truncate to max_length
         if len(text) > max_length:
             text = text[:max_length] + "..."
         
@@ -137,34 +138,35 @@ class HTMLProcessor:
     @staticmethod
     def extract_interactive_elements(html: str) -> List[Dict[str, str]]:
         """
-        提取页面中的可交互元素 (按钮、链接、输入框等)
-        
-        【用途】
-        帮助 LLM 理解页面上可以执行的操作，从而生成更合理的任务。
+        Extract interactive elements on the page (buttons, links, inputs, etc.).
+
+        Purpose:
+        Help the LLM understand what actions are possible on the page, so it can
+        generate more grounded tasks.
         
         Args:
-            html: HTML 字符串
+            html: HTML string
             
         Returns:
-            可交互元素列表
+            Interactive element list
         """
         elements = []
         
-        # 提取链接
+        # Links
         links = re.findall(r'<a[^>]*href=["\']([^"\']*)["\'][^>]*>(.*?)</a>', html, re.IGNORECASE | re.DOTALL)
-        for href, text in links[:20]:  # 限制数量
+        for href, text in links[:20]:  # Limit count
             clean_text = re.sub(r'<[^>]+>', '', text).strip()
             if clean_text:
                 elements.append({"type": "link", "text": clean_text[:100], "href": href})
         
-        # 提取按钮
+        # Buttons
         buttons = re.findall(r'<button[^>]*>(.*?)</button>', html, re.IGNORECASE | re.DOTALL)
         for btn_text in buttons[:10]:
             clean_text = re.sub(r'<[^>]+>', '', btn_text).strip()
             if clean_text:
                 elements.append({"type": "button", "text": clean_text[:100]})
         
-        # 提取输入框
+        # Inputs
         inputs = re.findall(r'<input[^>]*(?:placeholder=["\']([^"\']*)["\']|name=["\']([^"\']*)["\'])[^>]*>', html, re.IGNORECASE)
         for placeholder, name in inputs[:10]:
             elements.append({"type": "input", "placeholder": placeholder, "name": name})
@@ -173,20 +175,19 @@ class HTMLProcessor:
     
     @staticmethod
     def extract_page_title(html: str) -> str:
-        """提取页面标题"""
+        """Extract the page title."""
         match = re.search(r'<title[^>]*>(.*?)</title>', html, re.IGNORECASE | re.DOTALL)
         return match.group(1).strip() if match else "Unknown Page"
     
     @staticmethod
     def summarize_page(html: str) -> Dict[str, Any]:
         """
-        生成页面摘要信息
-        
-        【输出格式】
-        返回一个字典，包含：
-        - title: 页面标题
-        - text_content: 文本内容 (截断)
-        - interactive_elements: 可交互元素列表
+        Build a page summary.
+
+        Returns a dict with:
+        - title: page title
+        - text_content: extracted text (truncated)
+        - interactive_elements: list of interactive elements
         """
         return {
             "title": HTMLProcessor.extract_page_title(html),
@@ -196,19 +197,20 @@ class HTMLProcessor:
 
 
 # ================================================================================
-# Prompt 构造器
+# Prompt builder
 # ================================================================================
 
 class PromptBuilder:
     """
-    Prompt 构造器
-    
-    【CuES 设计理念映射】
-    对应 CuES prompts/ 目录下的各种 Prompt 模板，但简化为单一类管理。
-    
-    【Pipeline 阶段】
-    1. Intent Generation Prompt: 生成任务意图 (对应 CuES Stage 2: Task Abstraction)
-    2. Answer Validation Prompt: 验证并生成答案 (对应 CuES Stage 3: Quality Control)
+    Prompt builder.
+
+    Mapping to CuES:
+    Similar to the prompt templates in CuES prompts/, but consolidated into a
+    single class for the demo pipeline.
+
+    Pipeline stages:
+    1) Intent generation prompt (CuES Stage 2: Task Abstraction)
+    2) Answer validation prompt (CuES Stage 3: Quality Control)
     """
     
     @staticmethod
@@ -218,71 +220,72 @@ class PromptBuilder:
         num_intents: int = 5
     ) -> str:
         """
-        构造 Intent 生成的 Prompt
-        
-        【CuES 对应】
-        这对应于 CuES Stage 2 中的 Task Abstraction，从环境状态中抽取可执行的任务。
-        
-        【关键差异】
-        - CuES 从 triplet (state, action, observation) 序列中抽取任务
-        - 本实现从静态 HTML 页面中推断可能的任务
+        Build the intent-generation prompt.
+
+        Mapping to CuES:
+        This corresponds to task abstraction (CuES Stage 2), extracting executable
+        tasks from environment state.
+
+        Key difference:
+        - CuES abstracts tasks from (state, action, observation) triplets.
+        - This demo infers tasks from a single static HTML page.
         
         Args:
-            page_summary: HTMLProcessor.summarize_page() 的输出
-            site_name: 网站名称 (如 "shopping_admin")
-            num_intents: 需要生成的 Intent 数量
+            page_summary: Output of HTMLProcessor.summarize_page()
+            site_name: Site name (e.g., "shopping_admin")
+            num_intents: Number of intents to generate
             
         Returns:
-            格式化的 Prompt 字符串
+            Formatted prompt string
         """
-        # 格式化交互元素列表
+        # Format interactive elements
         elements_text = ""
         for elem in page_summary.get("interactive_elements", [])[:15]:
             if elem["type"] == "link":
-                elements_text += f"  - [链接] {elem['text']}\n"
+                elements_text += f"  - [Link] {elem['text']}\n"
             elif elem["type"] == "button":
-                elements_text += f"  - [按钮] {elem['text']}\n"
+                elements_text += f"  - [Button] {elem['text']}\n"
             elif elem["type"] == "input":
-                elements_text += f"  - [输入框] {elem.get('placeholder', elem.get('name', ''))}\n"
+                elements_text += f"  - [Input] {elem.get('placeholder', elem.get('name', ''))}\n"
         
-        prompt = f"""你是一个 WebArena 任务生成专家。你需要根据给定的网页信息，生成合理的任务意图 (intent)。
+        prompt = f"""You are an expert WebArena task designer. Based on the page information below, generate plausible task intents.
 
-## 页面信息
+## Page information
 
-**网站类型**: {site_name}
-**页面标题**: {page_summary.get('title', 'Unknown')}
+**Site**: {site_name}
+**Page title**: {page_summary.get('title', 'Unknown')}
 
-**页面内容摘要**:
+**Page text summary**:
 {page_summary.get('text_content', '')[:2000]}
 
-**可交互元素**:
-{elements_text if elements_text else "  (无法识别的交互元素)"}
+**Interactive elements**:
+{elements_text if elements_text else "  (No interactive elements recognized)"}
 
-## 任务要求
+## Requirements
 
-请根据上述页面信息，生成 {num_intents} 个合理的任务意图 (intent)。
+Generate {num_intents} task intents.
 
-任务应该满足以下条件：
-1. **可执行性**: 任务必须是在该页面上可以完成的操作
-2. **明确性**: 任务描述要清晰，有明确的目标
-3. **多样性**: 任务类型应该多样化（查询、修改、导航等）
-4. **可验证性**: 任务完成后应该有可检验的结果
+Each task should satisfy:
+1. **Executable**: can be completed on this page (or by navigating from it).
+2. **Unambiguous**: clearly stated goal.
+3. **Diverse**: cover different task types (query/modification/navigation).
+4. **Verifiable**: should have an objective outcome that can be checked.
 
-## 任务类型参考
+## Task type examples
 
-对于 **shopping_admin** (电商后台管理系统)，常见任务包括:
-- 查询类: "What is the top-1 best-selling product in 2022?"
-- 统计类: "How many orders were placed in January 2023?"
-- 查找类: "Find the customer with the highest total order value"
-- 修改类: "Update the price of product X to $99.99"
+For **shopping_admin** (an e-commerce admin console), common tasks include:
+- Query: "What is the top-1 best-selling product in 2022?"
+- Statistics: "How many orders were placed in January 2023?"
+- Lookup: "Find the customer with the highest total order value"
+- Modification: "Update the price of product X to $99.99"
 
-## 输出格式
+## Output format
 
-请按以下 JSON 格式输出，每个任务包含:
-- intent: 任务意图描述 (英文)
-- task_type: 任务类型 (query/modification/navigation)
-- difficulty: 难度等级 (easy/medium/hard)
-- reasoning: 为什么这个任务是合理的 (中文简述)
+Return a JSON array. Each item must include:
+- intent: the task description (English)
+- task_type: query/modification/navigation
+- difficulty: easy/medium/hard
+- reasoning: why this task is plausible given the page (English)
 
 ```json
 [
@@ -290,13 +293,13 @@ class PromptBuilder:
     "intent": "What is the top-3 best-selling products in January 2023?",
     "task_type": "query",
     "difficulty": "medium",
-    "reasoning": "页面包含销售数据，可以查询销售排名"
+        "reasoning": "The page includes sales-related information, enabling a ranking query"
   }},
   ...
 ]
 ```
 
-请直接输出 JSON，不要添加其他解释文字。
+Only output JSON. Do not add any extra prose.
 """
         return prompt
     
@@ -307,50 +310,50 @@ class PromptBuilder:
         site_name: str
     ) -> str:
         """
-        构造答案验证/生成的 Prompt
-        
-        【CuES 对应】
-        这对应于 CuES Stage 3 中的 Quality Control，验证任务的可执行性并生成参考答案。
-        
-        【工作原理】
-        由于没有真实的浏览器执行环境，我们使用 LLM 来：
-        1. 推断该任务在给定页面上是否可执行
-        2. 基于页面内容推断可能的参考答案
-        3. 确定答案的验证方式 (exact_match, must_include 等)
+        Build the answer-validation / reference-answer prompt.
+
+        Mapping to CuES:
+        This corresponds to quality control (CuES Stage 3): validate executability
+        and generate reference answers.
+
+        How it works:
+        Since we do not execute a real browser here, we ask the LLM to:
+        1) judge whether the task is executable on (or reachable from) the page
+        2) infer plausible reference answers from the page content
+        3) choose an evaluation style (string_match/url_match/program_html)
         
         Args:
-            intent: 要验证的任务意图
-            page_summary: 页面摘要
-            site_name: 网站名称
+            intent: Task intent to validate
+            page_summary: Page summary
+            site_name: Site name
             
         Returns:
-            格式化的 Prompt 字符串
+            Formatted prompt string
         """
-        prompt = f"""你是一个 WebArena 任务验证专家。你需要评估给定的任务是否可以在网页上执行，并生成参考答案。
+        prompt = f"""You are a WebArena task validator. Evaluate whether the task can be completed on the given page (or by navigating from it), and generate reference answers.
 
-## 任务意图
+## Task intent
 
 **Intent**: {intent}
 
-## 页面信息
+## Page information
 
-**网站类型**: {site_name}
-**页面标题**: {page_summary.get('title', 'Unknown')}
+**Site**: {site_name}
+**Page title**: {page_summary.get('title', 'Unknown')}
 
-**页面内容摘要**:
+**Page text summary**:
 {page_summary.get('text_content', '')[:2500]}
 
-## 验证任务
+## What to evaluate
 
-请完成以下评估：
+Please complete:
+1. **Executability**: can this task be completed on this page (or via navigation)?
+2. **Reference answers**: if executable, infer plausible answers from the page.
+3. **Evaluation type**: choose an appropriate evaluation strategy.
 
-1. **可执行性评估**: 这个任务能在该页面（或通过该页面导航）完成吗？
-2. **参考答案推断**: 如果可执行，基于页面内容推断可能的答案
-3. **验证方式选择**: 选择合适的答案匹配方式
+## Output format
 
-## 输出格式
-
-请按以下 JSON 格式输出：
+Return JSON in the following format:
 
 ```json
 {{
@@ -358,75 +361,74 @@ class PromptBuilder:
   "confidence": 0.85,
   "eval_type": "string_match",
   "reference_answers": {{
-    "must_include": ["关键词1", "关键词2"],
-    "exact_match": "完整答案(如果适用)"
+        "must_include": ["keyword1", "keyword2"],
+        "exact_match": "full answer (if applicable)"
   }},
-  "reasoning": "解释为什么这个任务是可执行的，以及答案是如何推断的"
+    "reasoning": "Explain why this task is executable and how the answers are inferred"
 }}
 ```
 
-**eval_type 选项说明**:
-- `string_match`: 答案包含特定字符串
-- `url_match`: 最终 URL 匹配特定模式  
-- `program_html`: 需要检查 HTML 元素
+**eval_type options**:
+- `string_match`: the answer must contain specific strings
+- `url_match`: the final URL must match a pattern
+- `program_html`: requires checking HTML elements
 
-**reference_answers 字段说明**:
-- `must_include`: 答案必须包含的关键词列表
-- `exact_match`: 答案必须完全匹配的字符串
-- `fuzzy_match`: 模糊匹配的字符串
+**reference_answers fields**:
+- `must_include`: list of required keywords
+- `exact_match`: a string that must match exactly
+- `fuzzy_match`: a string for fuzzy matching
 
-如果任务不可执行，请设置:
+If the task is not executable, output:
 ```json
 {{
   "is_executable": false,
   "confidence": 0.1,
-  "reasoning": "解释为什么不可执行"
+    "reasoning": "Explain why it is not executable"
 }}
 ```
 
-请直接输出 JSON，不要添加其他解释文字。
+Only output JSON. Do not add any extra prose.
 """
         return prompt
 
 
 # ================================================================================
-# WebArena Task 格式化器
+# WebArena task formatter
 # ================================================================================
 
 @dataclass
 class WebArenaTask:
     """
-    WebArena 任务数据结构
-    
-    【字段说明】
-    这是 WebArena 标准任务格式的 Python 表示。
-    
-    【CuES 字段映射】
-    - intent: 对应 CuES Task 的 Query 字段
-    - reference_answers: 对应 CuES 验证阶段的输出
+    WebArena task data structure.
+
+    This is a Python representation of the standard WebArena task schema.
+
+    Mapping to CuES fields:
+    - intent: similar to the CuES task query
+    - reference_answers: similar to CuES validation outputs
     """
-    # 目标网站列表
+    # Target site list
     sites: List[str]
     
-    # 任务 ID
+    # Task ID
     task_id: int
     
-    # 是否需要登录
+    # Whether login is required
     require_login: bool
     
-    # 登录状态存储路径
+    # Storage state path
     storage_state: str
     
-    # 起始 URL
+    # Start URL
     start_url: str
     
-    # 任务意图 (核心字段)
+    # Task intent (core field)
     intent: str
     
-    # 评估配置
+    # Evaluation configuration
     eval: Dict[str, Any]
     
-    # 可选字段
+    # Optional fields
     geolocation: Optional[str] = None
     require_reset: bool = False
     intent_template: Optional[str] = None
@@ -434,29 +436,29 @@ class WebArenaTask:
     intent_template_id: Optional[int] = None
     
     def to_dict(self) -> Dict[str, Any]:
-        """转换为字典格式"""
+        """Convert to a dict."""
         result = asdict(self)
-        # 移除 None 值的可选字段
+        # Drop optional fields with None
         return {k: v for k, v in result.items() if v is not None}
 
 
 class TaskFormatter:
     """
-    任务格式化器
-    
-    【功能说明】
-    将生成的 Intent 和 Answer 封装为 WebArena 标准 JSON 格式。
-    
-    【CuES 对应】
-    类似于 CuES data/models.py 中的数据模型转换逻辑。
+    Task formatter.
+
+    Wrap generated intents and reference answers into the standard WebArena JSON
+    schema.
+
+    Mapping to CuES:
+    Similar to data-model conversion logic in CuES data/models.py.
     """
     
     def __init__(self, config):
         """
-        初始化格式化器
+        Initialize the formatter.
         
         Args:
-            config: Config 对象，包含 WebArena 配置
+            config: Config object including WebArena config
         """
         self.config = config
         self.task_counter = 0
@@ -469,27 +471,27 @@ class TaskFormatter:
         task_id: Optional[int] = None
     ) -> WebArenaTask:
         """
-        将 Intent 和 Answer 格式化为 WebArena 任务
-        
-        【处理流程】
-        1. 分配任务 ID (自动递增或指定)
-        2. 组装评估配置
-        3. 合并 WebArena 配置
+        Format an intent + reference answers into a WebArena task.
+
+        Steps:
+        1) assign task_id (auto-increment or explicit)
+        2) build evaluation config
+        3) merge WebArena config
         
         Args:
-            intent: 任务意图
-            reference_answers: 参考答案字典
-            eval_type: 评估类型
-            task_id: 任务 ID (可选)
+            intent: task intent
+            reference_answers: reference answers dict
+            eval_type: evaluation type
+            task_id: optional task id
             
         Returns:
-            WebArenaTask 对象
+            WebArenaTask
         """
         if task_id is None:
             task_id = self.task_counter
             self.task_counter += 1
         
-        # 构造评估配置
+        # Build evaluation config
         eval_config = {
             "eval_types": [eval_type],
             "reference_answers": reference_answers,
@@ -514,14 +516,14 @@ class TaskFormatter:
         start_id: int = 0
     ) -> List[Dict[str, Any]]:
         """
-        批量格式化任务
+        Format tasks in batch.
         
         Args:
-            generated_data: 包含 intent 和验证结果的数据列表
-            start_id: 起始任务 ID
+            generated_data: list containing intent and validation results
+            start_id: starting task id
             
         Returns:
-            WebArena 格式的任务列表
+            WebArena-format task list
         """
         self.task_counter = start_id
         tasks = []
