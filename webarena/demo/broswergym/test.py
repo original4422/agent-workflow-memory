@@ -7,6 +7,8 @@ from browsergym.core.task import AbstractBrowserTask
 from browsergym.core.env import BrowserEnv
 from playwright.sync_api import Page
 
+import browsergym.webarena # get registered WebArena EnvSpecs
+
 class MySimpleSearchTask(AbstractBrowserTask):
     """
     一个自定义任务示例：在 Bing 上搜索 'WebArena' 并通过检查 URL 参数验证成功。
@@ -72,6 +74,8 @@ def run_manual_test():
     # 注意：不要用 gym.make("browsergym/openended", task_entrypoint=...)
     # 因为该 env id 在注册时已经固定了默认 task_entrypoint，再传一次会冲突。
 
+    # env = gym.make(id = "browsergym/webarena.0", task_entrypoint=MySimpleSearchTask,)
+    
     env = BrowserEnv(
         task_entrypoint=MySimpleSearchTask,
         headless=False,  # 设置为 False 可以看到浏览器动作
