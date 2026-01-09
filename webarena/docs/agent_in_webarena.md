@@ -7,7 +7,7 @@
 ## run.py 的执行流程
 1. **解析参数**：获取模型名、任务名（如 `webarena.0`）、启动 URL、是否 headless、是否截图/AXTree/HTML、是否启用多步动作、最大步数、工作流记忆文件等。
 2. **准备环境参数**：构造 `EnvArgs`（来自 `browsergym.experiments`），设置任务标识、浏览器视口、慢速模式、headless 与任务特定参数（`openended` 任务会附加 `start_url`，并启用 `wait_for_user_message`）。
-3. **构造代理参数**：通过 `GenericAgentArgs`（继承 `AbstractAgentArgs`）封装聊天模型配置与 `Flags`。`Flags` 控制观测模态（HTML/AXTree/截图）、历史/思维链、动作空间（高层 BId/Coord/Nav 等），以及可选的 workflow 记忆文件。
+3. **构造代理参数**：通过 `GenericAgentArgs`（继承 `AbstractAgentArgs`）封装聊天模型配置与 `Flags`。`Flags` 控制观测模态（HTML/DOM, AXTree/截图）、历史/思维链、动作空间（高层 BId/Coord/Nav 等），以及可选的 workflow 记忆文件。
 4. **创建实验与运行**：
    - `exp_args = ExpArgs(env_args=..., agent_args=GenericAgentArgs(...))`
    - `exp_args.prepare(Path("./results"))` 创建实验目录、装配环境与代理。
