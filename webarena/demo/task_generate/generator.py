@@ -81,18 +81,11 @@ class LLMClient:
     
     def _init_azure_client(self):
         """Initialize Azure OpenAI (cloudgpt) client."""
-        try:
-            from cloudgpt_aoai import cloudgpt_aoai
-            self.client = cloudgpt_aoai.get_openai_client()
-            self.model_name=self.config.model_name
-            print("[INFO] Initialized Azure OpenAI (cloudgpt) client")
-            print(f"[INFO] Model: {self.model_name}")
-        except ImportError:
-            print("[WARN] cloudgpt_aoai is unavailable; falling back to OpenAI client")
-            self._init_openai_client()
-        except Exception as e:
-            print(f"[ERROR] Failed to initialize Azure client: {e}")
-            self._init_openai_client()
+        from cloudgpt_aoai import cloudgpt_aoai
+        self.client = cloudgpt_aoai.get_openai_client()
+        self.model_name=self.config.model_name
+        print("[INFO] Initialized Azure OpenAI (cloudgpt) client")
+        print(f"[INFO] Model: {self.model_name}")
     
     def _init_openai_client(self):
         """Initialize standard OpenAI client."""
@@ -229,12 +222,20 @@ class LLMClient:
             last_parse_error: Optional[str] = None
 
             for attempt in range(max_parse_retries):
-                response = self.client.chat.completions.create(
-                    model=self.model_name,
-                    messages=working_messages,
-                    temperature=temperature or self.config.temperature,
-                    max_tokens=max_tokens or self.config.max_tokens,
-                )
+                max_out_tokens = max_tokens or self.config.max_tokens
+                request_kwargs = {
+                    "model": self.model_name,
+                    "messages": working_messages,
+                    "temperature": temperature or self.config.temperature,
+                }
+                if max_out_tokens is not None:
+                    model_lower = str(self.model_name).lower()
+                    if self.config.api_type == "azure" and (("gpt-5" in model_lower) or model_lower.startswith("gpt5")):
+                        request_kwargs["max_completion_tokens"] = max_out_tokens
+                    else:
+                        request_kwargs["max_tokens"] = max_out_tokens
+
+                response = self.client.chat.completions.create(**request_kwargs)
                 response_content = (response.choices[0].message.content or "").strip()
                 last_response_content = response_content
 
@@ -248,7 +249,7 @@ class LLMClient:
                         "response": parsed_json,
                         "model": self.model_name,
                         "temperature": temperature or self.config.temperature,
-                        "max_tokens": max_tokens or self.config.max_tokens,
+                        "max_tokens": max_out_tokens,
                     }
                     self.conversation_history.append(conversation_entry)
                     return response_content
@@ -272,7 +273,7 @@ class LLMClient:
                         },
                         "model": self.model_name,
                         "temperature": temperature or self.config.temperature,
-                        "max_tokens": max_tokens or self.config.max_tokens,
+                        "max_tokens": max_out_tokens,
                     }
                     self.conversation_history.append(conversation_entry)
                     return response_content

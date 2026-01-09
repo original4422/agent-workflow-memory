@@ -153,6 +153,8 @@ azure-identity-broker>=1.0.0
 
 如果你有 Azure 访问权限，程序会自动使用 `cloudgpt_aoai` 模块进行认证，无需手动配置 API Key。
 
+注意：当 CloudGPT 模型/部署名为 `gpt-5*` 时，OpenAI Python SDK 需要使用 `max_completion_tokens`（`max_tokens` 会触发 400 Unsupported parameter）。本项目已在代码中做了自动兼容：`gpt-5*` 用 `max_completion_tokens`，其余模型用 `max_tokens`。
+
 ```bash
 # 确保已登录 Azure CLI
 az login
