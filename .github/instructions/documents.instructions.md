@@ -8,7 +8,7 @@ The following actions apply **ONLY** to the specific target folder where code mo
 - **Do NOT** update the `README.md` or `CHANGELOG` of other target folders if no code was changed inside them.
 - **Example:** If you modified files in `./webarena/demo/task_generate`, you must ONLY update the docs in `./webarena/demo/task_generate`. Ignore `./webarena/task_generate`.
 
-**Target Folders:** `./webarena/demo/task_generate`, `./webarena/demo/webarena`, `./webarena/task_generate`
+**Target Folders:** Only the 3 folders: `./webarena/demo/task_generate`, `./webarena/demo/webarena`, `./webarena/task_generate`
 
 ### 1. Sync README.md
 - **Requirement:** Ensure the `README.md` **inside the modified target folder** is up-to-date.
