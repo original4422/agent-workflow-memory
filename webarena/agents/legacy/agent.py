@@ -3,6 +3,7 @@ WARNING DEPRECATED WILL BE REMOVED SOON
 """
 
 from dataclasses import asdict, dataclass, field
+import logging
 import traceback
 from warnings import warn
 from langchain.schema import HumanMessage, SystemMessage
@@ -142,6 +143,12 @@ does not support vision. Disabling use_screenshot."""
             ans_dict["err_msg"] = str(e)
             ans_dict["stack_trace"] = traceback.format_exc()
             ans_dict["n_retry"] = self.max_retry
+            logging.warning(
+                "Agent failed to produce a valid action after %s retries: %s",
+                self.max_retry,
+                str(e),
+            )
+            logging.debug(ans_dict["stack_trace"])
 
         self.actions.append(ans_dict["action"])
         self.memories.append(ans_dict.get("memory", None))

@@ -15,7 +15,7 @@ from langchain_openai import ChatOpenAI
 from langchain.schema import BaseMessage
 from langchain.chat_models.base import SimpleChatModel
 from langchain.callbacks.manager import CallbackManagerForLLMRun
-from pydantic import Field
+from pydantic import Field, PrivateAttr
 from transformers import pipeline
 from dataclasses import dataclass
 from huggingface_hub import InferenceClient
@@ -120,6 +120,13 @@ class ChatModelArgs:
                 model_name=model_name,
                 temperature=self.temperature,
                 max_tokens=self.max_new_tokens,
+            )
+        elif self.model_name.startswith(("cloudgpt/", "azure/")):
+            _, model_name = self.model_name.split("/", 1)
+            return CloudGPTChatModel(
+                model_name=model_name,
+                temperature=self.temperature,
+                max_new_tokens=self.max_new_tokens,
             )
         elif self.model_name.startswith(("glm/", "kimi/")):
             _, model_name = self.model_name.split("/", 1)
@@ -308,6 +315,78 @@ class HuggingFaceChatModel(SimpleChatModel):
 
     def _llm_type(self):
         return "huggingface"
+
+
+class CloudGPTChatModel(SimpleChatModel):
+    """LangChain SimpleChatModel wrapper for CloudGPT Azure OpenAI.
+
+    This mirrors the usage in `webarena/demo/task_generate/generator.py`:
+    - uses `cloudgpt_aoai.get_openai_client()` (AAD auth)
+    - calls `client.chat.completions.create(model=..., messages=...)`
+
+    Notes:
+    - We lazily initialize the client on first request to avoid triggering
+      interactive auth during `make_chat_model()`.
+    """
+
+    client: Any = Field(description="The CloudGPT model instance")
+    
+    model_name: str = Field(description="the model name of Azure deployment, e.g. 'gpt-4o-20241120-2'")
+    temperature: float = Field(default=0.7)
+    max_new_tokens: Optional[int] = Field(default=16384)
+
+    def __init__(
+        self,
+        model_name: str,
+        temperature: float = 0.7,
+        max_new_tokens: int = 16384,    
+    ):
+        super().__init__()
+        self.model_name = model_name
+        self.temperature = temperature
+        self.max_new_tokens = max_new_tokens
+
+    def _get_client(self):
+        from cloudgpt_aoai import cloudgpt_aoai
+        self.client = cloudgpt_aoai.get_openai_client()
+        return self.client
+
+    def _call(
+        self,
+        messages: List[BaseMessage],
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+    ) -> str:
+        if stop is not None or run_manager is not None or kwargs:
+            logging.warning(
+                "The `stop`, `run_manager`, and `kwargs` arguments are ignored in this implementation."
+            )
+
+        client = self._get_client()
+        openai_messages = _convert_messages_to_dict(messages)
+
+        request_kwargs: dict = {
+            "model": self.model_name,
+            "messages": openai_messages,
+        }
+        if self.max_new_tokens is not None:
+            model_lower = str(self.model_name).lower()
+            if ("gpt-5" in model_lower) or model_lower.startswith("gpt5"):
+                request_kwargs["max_completion_tokens"] = self.max_new_tokens
+                # 'temperature' does not support 0.1 with this model. Only the default (1) value is supported.
+            else:
+                request_kwargs["temperature"] = self.temperature
+                request_kwargs["max_tokens"] = self.max_new_tokens
+
+        response = client.chat.completions.create(**request_kwargs)
+        try:
+            return response.choices[0].message.content or ""
+        except Exception:
+            return ""
+
+    def _llm_type(self):
+        return "cloudgpt"
 
 
 def _convert_messages_to_dict(messages):

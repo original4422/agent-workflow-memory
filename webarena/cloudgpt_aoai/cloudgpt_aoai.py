@@ -456,7 +456,7 @@ def get_openai_client(
     )
     token_provider()
     client = openai.AzureOpenAI(
-        api_version="2024-08-01-preview",
+        api_version="2024-10-21",
         azure_endpoint="https://cloudgpt-openai.azure-api.net/",
         azure_ad_token_provider=token_provider,
     )
@@ -482,7 +482,7 @@ async def async_get_openai_client(
     )
     await token_provider()
     client = openai.AsyncAzureOpenAI(
-        api_version="2024-08-01-preview",
+        api_version="2024-10-21",
         azure_endpoint="https://cloudgpt-openai.azure-api.net/",
         azure_ad_token_provider=token_provider,
     )

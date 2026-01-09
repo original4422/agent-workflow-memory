@@ -31,8 +31,8 @@ def parse_args():
     parser.add_argument(
         "--model_name",
         type=str,
-        default="glm/glm-4.6",
-        help="Model name for the chat model (e.g., openai/gpt-4o, glm/glm-4.6, or kimi/moonshot-v1-8k).",
+        default="kimi/kimi-k2-thinking",
+        help="Model name for the chat model (e.g., openai/gpt-4o, glm/glm-4.5, or kimi/kimi-k2-thinking).",
     )
     parser.add_argument(
         "--task_name",
@@ -114,15 +114,15 @@ def parse_args():
         default=None,
         help="Path to the memory file to load for the agent.",
     )
-    # parser.add_argument(
-    #     "--task_config_path",
-    #     type=str,
-    #     default=None,
-    #     help=(
-    #         "Optional path to a WebArena task config JSON (e.g., config_files/tests/shopping_admin_test.json). "
-    #         "When set, run.py will force WebArena to read this JSON (no env var or library edits needed)."
-    #     ),
-    # )
+    parser.add_argument(
+        "--task_config_path",
+        type=str,
+        default=None,
+        help=(
+            "Optional path to a JSON file that will be used to override the site-packages "
+            "resource webarena/test.raw.json via a runtime monkeypatch (importlib.resources)."
+        ),
+    )
 
     return parser.parse_args()
 
@@ -137,40 +137,61 @@ WARNING this demo agent will soon be moved elsewhere. Expect it to be removed at
     if (args.workflow_path is not None) and (not os.path.exists(args.workflow_path)):
         open(args.workflow_path, "w").close()
 
-    # Optional: override WebArena task config without touching site-packages
-    '''
-    if args.task_config_path:
+    # Optional: override WebArena task config without touching site-packages.
+    # browsergym.webarena.task reads:
+    #   import webarena
+    #   importlib.resources.files(webarena).joinpath("test.raw.json").read_text()
+    # So we monkeypatch importlib.resources.files for the webarena package only.
+    use_monkeypatch = False
+    if args.task_config_path and args.task_name.startswith("webarena."):
+        use_monkeypatch = True
         task_config_abs = str(Path(args.task_config_path).resolve())
         if not os.path.exists(task_config_abs):
             raise FileNotFoundError(f"Task config not found: {task_config_abs}")
 
-        if args.task_name.startswith("webarena."):
-            config_text = Path(task_config_abs).read_text()
+        config_text = Path(task_config_abs).read_text(encoding="utf-8")
+        target_resource_name = "test.raw.json"
 
-            _orig_files = importlib_resources.files
+        _orig_files = importlib_resources.files
 
-            class _FilesShim:
-                def __init__(self, content: str):
-                    self.content = content
+        class _OverriddenResource:
+            def __init__(self, content: str, encoding: str = "utf-8"):
+                self._content = content
+                self._encoding = encoding
 
-                def joinpath(self, name):
-                    class _PathShim:
-                        def __init__(self, inner_content: str):
-                            self.inner_content = inner_content
+            def read_text(self, *args, **kwargs):
+                return self._content
 
-                        def read_text(self):
-                            return self.inner_content
+            def read_bytes(self, *args, **kwargs):
+                return self._content.encode(self._encoding)
 
-                    return _PathShim(self.content)
+            def open(self, mode: str = "r", *args, **kwargs):
+                import io
 
-            # Monkeypatch importlib.resources.files for the webarena package only
-            def _files_override(pkg):
-                if getattr(pkg, "__name__", None) == "webarena":
-                    return _FilesShim(config_text)
-                return _orig_files(pkg)
+                if "b" in mode:
+                    return io.BytesIO(self.read_bytes())
+                return io.StringIO(self._content)
 
-            importlib_resources.files = _files_override
-    '''
+        class _FilesProxy:
+            def __init__(self, inner, overridden_name: str, overridden_text: str):
+                self._inner = inner
+                self._overridden_name = overridden_name
+                self._overridden_text = overridden_text
+
+            def joinpath(self, name):
+                if name == self._overridden_name:
+                    return _OverriddenResource(self._overridden_text)
+                return self._inner.joinpath(name)
+
+            def __truediv__(self, name):
+                return self.joinpath(name)
+
+        def _files_override(pkg):
+            if getattr(pkg, "__name__", None) == "webarena":
+                return _FilesProxy(_orig_files(pkg), target_resource_name, config_text)
+            return _orig_files(pkg)
+
+        importlib_resources.files = _files_override
 
     task_kwargs = None
     if args.task_name == "openended":
@@ -196,7 +217,7 @@ WARNING this demo agent will soon be moved elsewhere. Expect it to be removed at
                 model_name=args.model_name,
                 max_total_tokens=128_000,  # "Maximum total tokens for the chat model."
                 max_input_tokens=126_000,  # "Maximum tokens for the input to the chat model."
-                max_new_tokens=2_000,  # "Maximum total tokens for the chat model."
+                max_new_tokens=4096,  # "Maximum total tokens for the chat model."
             ),
             flags=Flags(
                 use_html=args.use_html,
@@ -223,7 +244,10 @@ WARNING this demo agent will soon be moved elsewhere. Expect it to be removed at
     exp_args.run()
 
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    result_dir = Path(f"results/{args.task_name}/{timestamp}/")
+    if use_monkeypatch:
+        result_dir = Path(f"results/custom.{args.task_name}/{timestamp}/")
+    else:
+        result_dir = Path(f"results/{args.task_name}/{timestamp}/")
     os.makedirs(result_dir, exist_ok=True)
     os.rename(exp_args.exp_dir, result_dir)
 

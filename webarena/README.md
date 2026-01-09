@@ -61,6 +61,13 @@ export OPENAI_API_KEY=<YOUR_KEY>
 python run.py --task_name "webarena.0" # switch task id from 0 to 811
 ```
 
+Override the installed `webarena/test.raw.json` (in site-packages) at runtime via monkeypatch:
+
+```bash
+python run.py --task_name "webarena.0" \
+	--task_config_path "webarena/demo/task_generate/generated_task/tasks_20260105_150433.json"
+```
+
 You can check the results in `./results/...webarena.0.../`.
 
 ### with Agent Task Memory :atm:
@@ -68,7 +75,7 @@ You can check the results in `./results/...webarena.0.../`.
 **Step 1**. To run inference on a task:
 
 ```bash
-python run.py --task "webarena.0" \
+python run.py --task_name "webarena.0" \
 --workflow_path "workflow/shopping.txt"
 ```
 
