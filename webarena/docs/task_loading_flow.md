@@ -269,6 +269,54 @@ with tempfile.NamedTemporaryFile(mode="w+", delete=False) as f:
 
 ---
 
+## 11. `intent_template_id` / `intent_template`：运行时是否用到？哪里会用到？
+
+这一节补充回答你提到的疑问：`intent_template_id` 在 `browsergym/webarena/task.py` 里是否“真的有用”，以及本仓库/安装包里哪里会用到 `intent_template_id` 和 `intent_template`。
+
+### 11.1 `intent_template_id` 在 `GenericWebArenaTask` 里确实“有用”，但默认 benchmark 链路不会传它
+
+`GenericWebArenaTask.__init__()` 强制要求 `task_id` 和 `intent_template_id` 二选一（互斥）：
+
+- 互斥检查 + 读取 configs： [browsergym/webarena/task.py#L24-L67](../../myenv/webarena/lib/python3.10/site-packages/browsergym/webarena/task.py#L24-L67)
+- 传入 `intent_template_id` 时，按 `conf["intent_template_id"] == intent_template_id` 过滤得到一组 `task_configs`： [browsergym/webarena/task.py#L69-L77](../../myenv/webarena/lib/python3.10/site-packages/browsergym/webarena/task.py#L69-L77)
+- 传入 `task_id` 时，按 `conf["task_id"] == task_id` 过滤： [browsergym/webarena/task.py#L79-L86](../../myenv/webarena/lib/python3.10/site-packages/browsergym/webarena/task.py#L79-L86)
+
+也就是说：**`intent_template_id` 的语义是“用模板分组”，一次选中该模板下的一批 configs，然后在 `setup()` 随机抽一个具体任务配置执行**（随机抽取见 [browsergym/webarena/task.py#L92-L95](../../myenv/webarena/lib/python3.10/site-packages/browsergym/webarena/task.py#L92-L95)）。
+
+但你现在的标准入口 `--task_name webarena.X`（benchmark 任务）不会走 `intent_template_id` 这条支路，因为 `browsergym.webarena` 的注册只冻结了 `task_id`：
+
+- 注册循环： [browsergym/webarena/__init__.py#L16-L24](../../myenv/webarena/lib/python3.10/site-packages/browsergym/webarena/__init__.py#L16-L24)
+- 关键注册参数：`task_kwargs={"task_id": task_id}`（没有 `intent_template_id`）
+
+因此：
+
+- **默认 benchmark 运行时：用的是 `task_id`。**
+- **`intent_template_id` 这条路径需要“额外入口”才能触发**（例如额外注册一个 gym id，把 `intent_template_id` 冻结传入；或你在自定义脚本里直接构造 `GenericWebArenaTask(seed, intent_template_id=...)`）。
+
+### 11.2 `intent_template` / `intent_template_id` 不参与 goal 与评测；运行时使用的是 `intent` + `eval`
+
+在 `setup()` 中：goal 直接取 `self.config["intent"]`，没有用 `intent_template`：
+
+- goal = intent： [browsergym/webarena/task.py#L120-L152](../../myenv/webarena/lib/python3.10/site-packages/browsergym/webarena/task.py#L120-L152)
+
+评测（evaluator）读取的是 config 文件里的 `configs["intent"]` 与 `configs["eval"]["reference_answers"]` 等字段，并不会读取 `intent_template` / `intent_template_id`：
+
+- evaluator 读取 intent + reference_answers： [webarena/evaluation_harness/evaluators.py#L130-L170](../../myenv/webarena/lib/python3.10/site-packages/webarena/evaluation_harness/evaluators.py#L130-L170)
+
+因此可以把 `intent_template` / `intent_template_id` 理解为：**数据集层面的“元数据”（metadata）**，而非运行时提示/评测必须字段。
+
+### 11.3 本仓库里哪里会用到 `intent_template_id` / `intent_template`（主要是数据处理/生成工具链）
+
+在本仓库中，这两个字段主要用于“聚类/去重/统计/任务生成 schema”，而不是用于 BrowserGym 的 `webarena.X` 执行：
+
+- 基于 `intent_template_id` 的去重（deduplication）：[webarena/induce_rule.py#L109-L132](../induce_rule.py#L109-L132)
+- 按 `intent_template_id` 分组统计，并读取 `intent_template` 生成摘要：
+    - [webarena/config_files/classify_hard_coding.py#L46-L82](../config_files/classify_hard_coding.py#L46-L82)
+- 任务生成（demo）里把 `intent_template` / `intent_template_id` 作为可选字段写入任务 JSON：
+    - [webarena/demo/task_generate/utils.py#L410-L442](../demo/task_generate/utils.py#L410-L442)
+
+---
+
 ## Q&A：`browsergym.webarena.task.GenericWebArenaTask` 为什么读 `test.raw.json`？
 
 ### Q1：`task.py` 明明在“webarena”目录下，为什么还要 `import webarena`？它在 import 什么？
