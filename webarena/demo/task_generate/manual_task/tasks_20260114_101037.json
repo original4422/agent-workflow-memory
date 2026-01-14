@@ -385,16 +385,19 @@
     ],
     "task_id": 180,
     "require_login": true,
+    "geolocation": null,
     "storage_state": "./.auth/shopping_admin_state.json",
     "start_url": "http://166.111.53.249:7780/admin",
-    "intent": "Click the 'Reports' button on the left sidebar, then click 'Best Sellers' from the expanded menu. Tell the user what he can see on the page now.",
+    "intent": "Click the 'Reports' button on the left sidebar. Record all buttons shown in the expanded 'Reports' menu. Then click 'Bestsellers' (under 'Products') and describe what you can see on the Bestsellers Report page.",
     "eval": {
       "eval_types": [
         "string_match"
       ],
       "reference_answers": {
         "must_include": [
-          "BestSellers Report"
+          "Orders",
+          "Low Stock",
+          "Bestsellers Report"
         ]
       },
       "reference_url": "",

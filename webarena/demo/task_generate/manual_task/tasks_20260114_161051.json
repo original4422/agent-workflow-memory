@@ -1,0 +1,306 @@
+[
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 0,
+    "require_login": true,
+    "geolocation": null,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "intent": "Click the 'REPORTS' button in the navigation menu to expand the Reports menu. IMPORTANT: Do NOT call send_msg_to_user until you have completed the click. send_msg_to_user must be the final action. After clicking, send_msg_to_user with the exact text: REPORTS clicked",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "REPORTS clicked"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 1,
+    "require_login": true,
+    "geolocation": null,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "intent": "Click the 'REPORTS' button in the navigation menu to expand the Reports menu, then describe what items you can see in the expanded Reports menu. IMPORTANT: Do NOT call send_msg_to_user until you have expanded the menu and inspected it. send_msg_to_user must be the final action. Your final message must include these substrings: Orders; Low Stock; Bestsellers.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Orders",
+          "Low Stock",
+          "Bestsellers"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 2,
+    "require_login": true,
+    "geolocation": null,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "intent": "Click the 'REPORTS' button to expand the Reports menu, briefly describe what items are shown in the expanded menu, then click 'Bestsellers' under the 'Products' section to open the Bestsellers report page. IMPORTANT: Do NOT call send_msg_to_user until you have opened the Bestsellers Report page. send_msg_to_user must be the final action. Your final message must include these substrings: Bestsellers Report; Orders; Low Stock; Bestsellers.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Orders",
+          "Low Stock",
+          "Bestsellers",
+          "Bestsellers Report"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 3,
+    "require_login": true,
+    "geolocation": null,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "intent": "Navigate to Reports > Products > Bestsellers to open the Bestsellers Report page. Describe what you see on this page, including the filter controls and the table headers (e.g., Period/From/To/Show Report and Interval/Product/Price/Order Quantity). IMPORTANT: Do NOT call send_msg_to_user until you have reached the Bestsellers Report page and inspected the page. send_msg_to_user must be the final action. Your final message must include these substrings: Bestsellers Report; Period; From; To; Show Report; Interval; Product; Price; Order Quantity.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Bestsellers Report",
+          "Period",
+          "From",
+          "To",
+          "Show Report",
+          "Interval",
+          "Product",
+          "Price",
+          "Order Quantity"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 4,
+    "require_login": true,
+    "geolocation": null,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "intent": "Navigate to the Bestsellers Report page (Reports > Products > Bestsellers). Change the filter Period from Day to Month. IMPORTANT: Do NOT call send_msg_to_user until after the Period is changed. send_msg_to_user must be the final action. Your final message must include these substrings: Period; Day; Month.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Period",
+          "Day",
+          "Month"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 5,
+    "require_login": true,
+    "geolocation": null,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "intent": "Navigate to the Bestsellers Report page (Reports > Products > Bestsellers). Ensure the filter Period is set to Month (change it to Month if needed). IMPORTANT: Do NOT call send_msg_to_user until after verifying Period is Month. send_msg_to_user must be the final action. Your final message must include these substrings: Period; Month.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Period",
+          "Month"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 6,
+    "require_login": true,
+    "geolocation": null,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "intent": "Navigate to the Bestsellers Report page (Reports > Products > Bestsellers). Set Period to Month (if not already). Then set the From date field to 1/1/2022 (use exactly this format). Do NOT click Show Report yet. IMPORTANT: Do NOT call send_msg_to_user until after setting the From date. send_msg_to_user must be the final action. Your final message must include these substrings: Month; From; 1/1/2022.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Month",
+          "From",
+          "1/1/2022"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 7,
+    "require_login": true,
+    "geolocation": null,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "intent": "Navigate to the Bestsellers Report page (Reports > Products > Bestsellers). Set Period to Month (if not already). Set the From date to 1/1/2022 and the To date to 1/31/2022 (use exactly these formats). Do NOT click Show Report yet. IMPORTANT: Do NOT call send_msg_to_user until after setting both dates. send_msg_to_user must be the final action. Your final message must include these substrings: From; 1/1/2022; To; 1/31/2022.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "From",
+          "1/1/2022",
+          "To",
+          "1/31/2022"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 8,
+    "require_login": true,
+    "geolocation": null,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "intent": "Navigate to the Bestsellers Report page (Reports > Products > Bestsellers). Set Period to Month, set From to 1/1/2022, set To to 1/31/2022, then click 'Show Report' to generate the report. Wait for the page to load the results. IMPORTANT: Do NOT call send_msg_to_user until after the report is generated. send_msg_to_user must be the final action. After generating the report, send_msg_to_user with the exact text: Show Report clicked",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Show Report clicked"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 9,
+    "require_login": true,
+    "geolocation": null,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "intent": "Navigate to the Bestsellers Report page (Reports > Products > Bestsellers). Set Period to Month, From to 1/1/2022, and To to 1/31/2022, then click 'Show Report'. Describe the results table you see and explicitly list the column headers. IMPORTANT: Do NOT call send_msg_to_user until after the report is generated and you have inspected the table. send_msg_to_user must be the final action. Your final message must include these substrings: Interval; Product; Price; Order Quantity.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Interval",
+          "Product",
+          "Price",
+          "Order Quantity"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 10,
+    "require_login": true,
+    "geolocation": null,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "intent": "Navigate to the Bestsellers Report page (Reports > Products > Bestsellers). Set Period to Month, From to 1/1/2022, and To to 1/31/2022, then click 'Show Report'. Determine the top-1 best-selling product in January 2022 based on Order Quantity. If there is a tie for top-1, explicitly say it is a tie and list all tied products. IMPORTANT: Do NOT call send_msg_to_user until after you have generated the report and identified the top-1 result(s). send_msg_to_user must be the final action. Your final message must include these substrings: tie; Sprite Stasis Ball 55 cm; Helios EverCool; Kratos Gym Pant-32-Black; Thorpe Track Pant-33-Black; Josie Yoga Jacket-XS-Black.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "tie",
+          "Sprite Stasis Ball 55 cm",
+          "Helios EverCool",
+          "Kratos Gym Pant-32-Black",
+          "Thorpe Track Pant-33-Black",
+          "Josie Yoga Jacket-XS-Black"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  }
+]

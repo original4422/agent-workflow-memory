@@ -102,6 +102,13 @@ generated_tasks.json (Output)
 }
 ```
 
+## ✍️ 手动任务 (manual_task)
+
+当你已经明确知道 UI 上的按钮/页面文案，希望快速构造可复现任务用于调试时，可以直接在 `manual_task/` 下维护 JSON。
+
+- 路径: `webarena/demo/task_generate/manual_task/`
+- 建议: `intent` 里尽量使用 UI 的**精确文本**（例如 `Reports` / `Bestsellers`），并清楚写出层级关系（例如 “under 'Products'”），方便 Agent 执行、也方便你后续做 `must_include` 的最小校验。
+
 ### 字段详解
 
 | 字段 | 来源 | 说明 |
