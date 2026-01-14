@@ -1,0 +1,306 @@
+[
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 0,
+    "require_login": true,
+    "geolocation": null,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "intent": "From the Magento Admin page, click the 'REPORTS' button in the navigation menu to expand the Reports menu. Then reply with exactly: REPORTS clicked",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "REPORTS clicked"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 1,
+    "require_login": true,
+    "geolocation": null,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "intent": "From the Magento Admin page, click the 'REPORTS' button in the navigation menu to expand the Reports menu. Then describe what items you can see in the expanded Reports menu.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Orders",
+          "Low Stock",
+          "Bestsellers"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 2,
+    "require_login": true,
+    "geolocation": null,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "intent": "From the Magento Admin page, click the 'REPORTS' button to expand the Reports menu. Briefly describe what items are shown in the expanded menu. Then click 'Bestsellers' under the 'Products' section to open the Bestsellers Report page. Finally, describe what you see on the Bestsellers Report page.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Orders",
+          "Low Stock",
+          "Bestsellers",
+          "Bestsellers Report"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 3,
+    "require_login": true,
+    "geolocation": null,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "intent": "From the Magento Admin page, click 'REPORTS' in the navigation menu, then click 'Bestsellers' under the 'Products' section to open the Bestsellers Report page. Describe what you see on this page, including the filter controls and the table headers.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Bestsellers Report",
+          "Period",
+          "From",
+          "To",
+          "Show Report",
+          "Interval",
+          "Product",
+          "Price",
+          "Order Quantity"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 4,
+    "require_login": true,
+    "geolocation": null,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "intent": "From the Magento Admin page, click 'REPORTS' in the navigation menu, then click 'Bestsellers' under the 'Products' section to open the Bestsellers Report page. Change the filter Period from Day to Month. Then confirm the change.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Period",
+          "Day",
+          "Month"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 5,
+    "require_login": true,
+    "geolocation": null,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "intent": "From the Magento Admin page, click 'REPORTS' in the navigation menu, then click 'Bestsellers' under the 'Products' section to open the Bestsellers Report page. Ensure the filter Period is set to Month (change it to Month if needed). Then confirm it is set to Month.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Period",
+          "Month"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 6,
+    "require_login": true,
+    "geolocation": null,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "intent": "From the Magento Admin page, click 'REPORTS' in the navigation menu, then click 'Bestsellers' under the 'Products' section to open the Bestsellers Report page. Set Period to Month (if not already). Then set the From date field to 1/1/2022. Finally, confirm the setting.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Month",
+          "From",
+          "1/1/2022"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 7,
+    "require_login": true,
+    "geolocation": null,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "intent": "From the Magento Admin page, click 'REPORTS' in the navigation menu, then click 'Bestsellers' under the 'Products' section to open the Bestsellers Report page. Set Period to Month (if not already). Set the From date to 1/1/2022 and the To date to 1/31/2022. Finally, confirm the date range you set.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "From",
+          "1/1/2022",
+          "To",
+          "1/31/2022"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 8,
+    "require_login": true,
+    "geolocation": null,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "intent": "From the Magento Admin page, click 'REPORTS' in the navigation menu, then click 'Bestsellers' under the 'Products' section to open the Bestsellers Report page. Set Period to Month, set From to 1/1/2022, set To to 1/31/2022, then click 'Show Report' to generate the report. After the report loads, reply with exactly: Show Report clicked",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Show Report clicked"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 9,
+    "require_login": true,
+    "geolocation": null,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "intent": "From the Magento Admin page, click 'REPORTS' in the navigation menu, then click 'Bestsellers' under the 'Products' section to open the Bestsellers Report page. Set Period to Month, From to 1/1/2022, and To to 1/31/2022, then click 'Show Report'. Describe the results table you see and explicitly list the column headers.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Interval",
+          "Product",
+          "Price",
+          "Order Quantity"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 10,
+    "require_login": true,
+    "geolocation": null,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "intent": "From the Magento Admin page, click 'REPORTS' in the navigation menu, then click 'Bestsellers' under the 'Products' section to open the Bestsellers Report page. Set Period to Month, From to 1/1/2022, and To to 1/31/2022, then click 'Show Report'. Determine the top-1 best-selling product in January 2022 based on Order Quantity. If there is a tie for top-1, say it is a tie and list all tied products.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "tie",
+          "Sprite Stasis Ball 55 cm",
+          "Helios EverCool",
+          "Kratos Gym Pant-32-Black",
+          "Thorpe Track Pant-33-Black",
+          "Josie Yoga Jacket-XS-Black"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  }
+]
