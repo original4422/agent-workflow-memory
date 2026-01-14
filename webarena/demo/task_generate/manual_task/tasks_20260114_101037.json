@@ -1,0 +1,406 @@
+[
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 0,
+    "require_login": true,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "geolocation": null,
+    "intent": "Click the 'Reports' button on the left sidebar and record what button is located directly below it.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Orders",
+          "Low Stock"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 1,
+    "require_login": true,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "geolocation": null,
+    "intent": "Click the 'Reports' button on the left sidebar",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Orders",
+          "Low Stock"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 2,
+    "require_login": true,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "geolocation": null,
+    "intent": "Click the 'Reports' button on the left sidebar, then record what button is located directly in the expanded menu.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Orders",
+          "Low Stock"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 3,
+    "require_login": true,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "geolocation": null,
+    "intent": "Click the 'Reports' button on the left sidebar, then record How many buttons are located directly in the expanded menu.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Orders",
+          "Low Stock"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 4,
+    "require_login": true,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "geolocation": null,
+    "intent": "Click the 'Reports' button on the left sidebar and record which buttons belongs to it.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Orders",
+          "Low Stock"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 5,
+    "require_login": true,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "geolocation": null,
+    "intent": "Click the 'Reports' button on the left sidebar and record which buttons belongs to it. Then find out what belongs to the 'BestSellers' button.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Bestsellers Report"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 6,
+    "require_login": true,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "geolocation": null,
+    "intent": "Click the 'Reports' button on the left sidebar and record which buttons belongs to it. Then find out what belongs to the 'BestSellers' button which belongs to 'Reports' button.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Bestsellers Report"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 7,
+    "require_login": true,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "geolocation": null,
+    "intent": "Click the 'Reports' button on the left sidebar, then record which buttons belongs to it, next find out what belongs to the 'BestSellers' button which belongs to 'Reports' button.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Bestsellers Report"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 8,
+    "require_login": true,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "geolocation": null,
+    "intent": "Click the 'Reports' button on the left sidebar, then record which buttons belongs to it, next find out what belongs to the 'BestSellers' button which belongs to 'Reports' button. #Notice use 'send_msg_to_user' action only when you finish all work and use 'send_msg_to_user' action in the end",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Bestsellers Report"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 9,
+    "require_login": true,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "geolocation": null,
+    "intent": "Click the 'Reports' button on the left sidebar, then record which buttons belongs to it, next find out what belongs to the 'BestSellers' button which belongs to 'Reports' button. #Notice action 'send_msg_to_user' must be the final action and other actions can't be placed after it.\n Use action 'send_msg_to_user' in the end only when you finish all work",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Bestsellers Report"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 10,
+    "require_login": true,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "geolocation": null,
+    "intent": "#Notice action 'send_msg_to_user' must be the final action and other actions can't be placed after it.\n Use action 'send_msg_to_user' in the end only when you finish all work.\n Click the 'Reports' button on the left sidebar, then record which buttons belongs to it, next find out what belongs to the 'BestSellers' button which belongs to 'Reports' button. ",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Bestsellers Report"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 20,
+    "require_login": true,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "geolocation": null,
+    "intent": "Click the 'Reports' button on the left sidebar, next find out what belongs to the 'BestSellers' button which belongs to 'Reports' button, finally record which buttons belongs to 'Reports' button and which buttons belongs to 'BestSellers' button",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Bestsellers Report"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 21,
+    "require_login": true,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "geolocation": null,
+    "intent": "Click the 'Reports' button on the left sidebar, next find out what belongs to the 'BestSellers' button in the expanded menu of the 'Reports' button, finally record which buttons belongs to 'Reports' button and which buttons belongs to 'BestSellers' button",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Bestsellers Report"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 22,
+    "require_login": true,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "geolocation": null,
+    "intent": "Click the 'Reports' button on the left sidebar, then click the 'BestSellers' button in the expanded menu, next find out what belongs to the 'BestSellers' button in the expanded menu of the 'Reports' button, finally record which buttons belongs to 'Reports' button and which buttons belongs to 'BestSellers' button",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Bestsellers Report"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 23,
+    "require_login": true,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "geolocation": null,
+    "intent": "Click the 'Reports' button on the left sidebar, then click the 'BestSellers' button in the expanded menu from 'Reports' button, next find out what is inside the 'BestSellers' button, finally record which buttons belongs to 'Reports' button and which buttons belongs to 'BestSellers' button",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Bestsellers Report"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 180,
+    "require_login": true,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "intent": "Click the 'Reports' button on the left sidebar, then click 'Best Sellers' from the expanded menu. Tell the user what he can see on the page now.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "BestSellers Report"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  }
+]

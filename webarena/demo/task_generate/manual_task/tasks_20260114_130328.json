@@ -1,0 +1,28 @@
+[
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 0,
+    "require_login": true,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "geolocation": null,
+    "intent": "try to find 'Low Stock' button",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Orders",
+          "Low Stock"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  }
+]
