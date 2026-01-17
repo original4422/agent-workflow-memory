@@ -14,6 +14,8 @@ from agents.legacy.dynamic_prompting import Flags
 from agents.legacy.utils.chat_api import ChatModelArgs
 import datetime
 
+import conversation_logger
+
 
 def str2bool(v):
     if isinstance(v, bool):
@@ -31,8 +33,8 @@ def parse_args():
     parser.add_argument(
         "--model_name",
         type=str,
-        default="kimi/kimi-k2-thinking",
-        help="Model name for the chat model (e.g., openai/gpt-4o, glm/glm-4.5, or kimi/kimi-k2-thinking).",
+        default="cloudgpt/gpt-4o-20241120-2",
+        help="Model name for the chat model (e.g., cloudgpt/gpt-4o-20241120-2, glm/glm-4.5, or kimi/kimi-k2-thinking).",
     )
     parser.add_argument(
         "--task_name",
@@ -56,13 +58,13 @@ def parse_args():
     parser.add_argument(
         "--headless",
         type=str2bool,
-        default=False,
+        default=True,
         help="Run the experiment in headless mode (hides the browser windows).",
     )
     parser.add_argument(
         "--demo_mode",
         type=str2bool,
-        default=True,
+        default=False,
         help="Add visual effects when the agents performs actions.",
     )
     parser.add_argument(
@@ -241,13 +243,32 @@ WARNING this demo agent will soon be moved elsewhere. Expect it to be removed at
     )
 
     exp_args.prepare(Path("./results"))
+
+    # Make the experiment directory available to the logger during runtime.
+    os.environ["WEBARENA_EXP_DIR"] = str(exp_args.exp_dir)
+    os.environ["WEBARENA_TASK_NAME"] = str(args.task_name)
+    os.environ["WEBARENA_MODEL_NAME"] = str(args.model_name)
+    os.environ.setdefault(
+        "WEBARENA_RUN_ID",
+        datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f") + f"_{os.getpid()}",
+    )
+
     exp_args.run()
 
+    # Best-effort finalize: merge JSONL tmp into conversation_history.json.
+    conversation_logger.finalize_conversation_history()
+
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp_model = f"{timestamp}_{args.model_name.split('/')[-1]}"
     if use_monkeypatch:
-        result_dir = Path(f"results/custom.{args.task_name}/{timestamp}/")
+        if "manual_task" in args.task_config_path:
+            source = "manual_task"
+        elif "generated_task" in args.task_config_path:
+            source = "generated_task"
+        config_stem = Path(args.task_config_path).stem
+        result_dir = Path(f"results/{source}/{config_stem}/custom.{args.task_name}/{timestamp_model}/")
     else:
-        result_dir = Path(f"results/{args.task_name}/{timestamp}/")
+        result_dir = Path(f"results/raw/{args.task_name}/{timestamp_model}/")
     os.makedirs(result_dir, exist_ok=True)
     os.rename(exp_args.exp_dir, result_dir)
 
