@@ -14,6 +14,10 @@ CuES-WebArena 是一个**好奇心驱动的、环境感知的**框架，用于�
 
 本项目基于 [CuES](https://arxiv.org/abs/2512.01311) 论文的方法，针对WebArena网页代理环境进行适配，实现了一个完整的三阶段数据生成管道。
 
+## 📚 文档索引
+
+- LLM prompt/messages 组装与维护（production 链路）：[docs/llm_prompt_and_messages.md](docs/llm_prompt_and_messages.md)
+
 ### 核心特性
 
 - **环境感知合成**：任务源自真实的浏览器交互轨迹，确保可执行性
