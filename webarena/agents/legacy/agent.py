@@ -8,6 +8,8 @@ import traceback
 from warnings import warn
 from langchain.schema import HumanMessage, SystemMessage
 
+import conversation_logger
+
 from browsergym.core.action.base import AbstractActionSet
 from browsergym.utils.obs import flatten_axtree_to_str, flatten_dom_to_str, prune_html
 from browsergym.experiments import Agent, AbstractAgentArgs
@@ -21,7 +23,7 @@ from .utils.chat_api import ChatModelArgs
 class GenericAgentArgs(AbstractAgentArgs):
     chat_model_args: ChatModelArgs = None
     flags: dynamic_prompting.Flags = field(default_factory=lambda: dynamic_prompting.Flags())
-    max_retry: int = 4
+    max_retry: int = 10
 
     def make_agent(self):
         return GenericAgent(
@@ -89,6 +91,10 @@ does not support vision. Disabling use_screenshot."""
     def get_action(self, obs):
 
         self.obs_history.append(obs)
+
+        # Sync step counter for conversation logging.
+        conversation_logger.set_step_idx(len(self.obs_history) - 1)
+        conversation_logger.reset_call_idx()
 
         main_prompt = dynamic_prompting.MainPrompt(
             obs_history=self.obs_history,

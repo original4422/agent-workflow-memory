@@ -10,6 +10,8 @@ import logging
 from typing import Tuple
 import time
 
+import conversation_logger
+
 from langchain_community.llms import HuggingFaceHub, HuggingFacePipeline
 from langchain_openai import ChatOpenAI
 from langchain.schema import BaseMessage
@@ -159,12 +161,10 @@ class ChatModelArgs:
 
     @property
     def model_short_name(self):
-        config = _load_config(self.model_name)
-        model_name = config.get("model_name") or self.model_name
-        if "/" in model_name:
-            return model_name.split("/")[1]
+        if "/" in self.model_name:
+            return self.model_name.split("/")[1]
         else:
-            return model_name
+            return self.model_name
 
     def key(self):
         """Return a unique key for these arguments."""
@@ -175,8 +175,11 @@ class ChatModelArgs:
         name_patterns_with_vision = [
             "vision",
             "4o",
+            "cloudgpt",
         ]
-        return any(pattern in self.model_name for pattern in name_patterns_with_vision)
+        vision_flag = any(pattern in self.model_name for pattern in name_patterns_with_vision)
+        # print(f"Model {self.model_name} has vision: {vision_flag}")
+        return vision_flag
 
 
 class HuggingFaceChatModel(SimpleChatModel):
@@ -379,11 +382,65 @@ class CloudGPTChatModel(SimpleChatModel):
                 request_kwargs["temperature"] = self.temperature
                 request_kwargs["max_tokens"] = self.max_new_tokens
 
-        response = client.chat.completions.create(**request_kwargs)
+        call_start = time.monotonic()
         try:
-            return response.choices[0].message.content or ""
-        except Exception:
-            return ""
+            response = client.chat.completions.create(**request_kwargs)
+            latency_ms = (time.monotonic() - call_start) * 1000.0
+
+            assistant_raw = ""
+            finish_reason = None
+            response_id = getattr(response, "id", None)
+            request_id = getattr(response, "request_id", None)
+
+            usage_obj = getattr(response, "usage", None)
+            usage = None
+            if usage_obj is not None:
+                if isinstance(usage_obj, dict):
+                    usage = usage_obj
+                else:
+                    usage = getattr(usage_obj, "model_dump", lambda: usage_obj)()
+
+            try:
+                if response.choices and response.choices[0] is not None:
+                    choice0 = response.choices[0]
+                    finish_reason = getattr(choice0, "finish_reason", None)
+                    msg = getattr(choice0, "message", None)
+                    assistant_raw = (getattr(msg, "content", None) or "").strip()
+            except Exception:
+                assistant_raw = ""
+
+            conversation_logger.append_event(
+                provider="cloudgpt_aoai",
+                model=self.model_name,
+                messages=openai_messages,
+                assistant_raw=assistant_raw,
+                usage=usage,
+                finish_reason=finish_reason,
+                request_id=request_id,
+                response_id=response_id,
+                latency_ms=latency_ms,
+                error=None,
+            )
+
+            return assistant_raw
+        except Exception as e:
+            latency_ms = (time.monotonic() - call_start) * 1000.0
+            conversation_logger.append_event(
+                provider="cloudgpt_aoai",
+                model=self.model_name,
+                messages=openai_messages,
+                assistant_raw=None,
+                usage=None,
+                finish_reason=None,
+                request_id=None,
+                response_id=None,
+                latency_ms=latency_ms,
+                error={
+                    "type": type(e).__name__,
+                    "message": str(e),
+                },
+            )
+            raise
 
     def _llm_type(self):
         return "cloudgpt"

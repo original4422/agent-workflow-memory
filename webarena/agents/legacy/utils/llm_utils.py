@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 import collections
 import json
 from pathlib import Path
 import re
 import time
+from typing import Optional
 from warnings import warn
 import logging
 
@@ -21,6 +24,8 @@ import io
 import base64
 from PIL import Image
 from openai import RateLimitError
+
+import conversation_logger
 
 
 def _extract_wait_time(error_message, min_retry_wait_time=60):
@@ -71,11 +76,64 @@ def retry(
     """
     tries = 0
     rate_limit_total_delay = 0
+
+    def _should_log_from_retry(chat_model) -> bool:
+        llm_type = getattr(chat_model, "_llm_type", None)
+        if callable(llm_type):
+            try:
+                return llm_type() != "cloudgpt"
+            except Exception:
+                return True
+        return True
+
+    def _extract_response_fields(answer_obj) -> tuple[Optional[dict], Optional[str], Optional[str], Optional[str]]:
+        usage = None
+        finish_reason = None
+        request_id = None
+        response_id = None
+
+        response_metadata = getattr(answer_obj, "response_metadata", None) or {}
+        if isinstance(response_metadata, dict):
+            finish_reason = response_metadata.get("finish_reason")
+            request_id = response_metadata.get("request_id") or response_metadata.get("x_request_id")
+            response_id = response_metadata.get("id")
+            usage = response_metadata.get("token_usage")
+
+        usage_metadata = getattr(answer_obj, "usage_metadata", None)
+        if usage_metadata is not None:
+            if isinstance(usage_metadata, dict):
+                usage = usage_metadata
+            else:
+                usage = getattr(usage_metadata, "model_dump", lambda: usage_metadata)()
+
+        return usage, finish_reason, request_id, response_id
+
     while tries < n_retry and rate_limit_total_delay < rate_limit_max_wait_time:
+        call_start = time.monotonic()
         try:
             answer = chat.invoke(messages)
         except RateLimitError as e:
+            latency_ms = (time.monotonic() - call_start) * 1000.0
             wait_time = _extract_wait_time(e.args[0], min_retry_wait_time)
+
+            if _should_log_from_retry(chat):
+                conversation_logger.append_event(
+                    provider="langchain_openai",
+                    model=getattr(chat, "model_name", None),
+                    messages=list(messages),
+                    assistant_raw=None,
+                    usage=None,
+                    finish_reason=None,
+                    request_id=None,
+                    response_id=None,
+                    latency_ms=latency_ms,
+                    error={
+                        "type": type(e).__name__,
+                        "message": str(e),
+                        "retry_wait_s": wait_time,
+                    },
+                )
+
             logging.warning(f"RateLimitError, waiting {wait_time}s before retrying.")
             time.sleep(wait_time)
             rate_limit_total_delay += wait_time
@@ -85,6 +143,42 @@ def retry(
                 )
                 raise
             continue
+        except Exception as e:
+            latency_ms = (time.monotonic() - call_start) * 1000.0
+            if _should_log_from_retry(chat):
+                conversation_logger.append_event(
+                    provider="langchain_openai",
+                    model=getattr(chat, "model_name", None),
+                    messages=list(messages),
+                    assistant_raw=None,
+                    usage=None,
+                    finish_reason=None,
+                    request_id=None,
+                    response_id=None,
+                    latency_ms=latency_ms,
+                    error={
+                        "type": type(e).__name__,
+                        "message": str(e),
+                    },
+                )
+            raise
+
+        latency_ms = (time.monotonic() - call_start) * 1000.0
+
+        if _should_log_from_retry(chat):
+            usage, finish_reason, request_id, response_id = _extract_response_fields(answer)
+            conversation_logger.append_event(
+                provider="langchain_openai",
+                model=getattr(chat, "model_name", None),
+                messages=list(messages),
+                assistant_raw=getattr(answer, "content", None),
+                usage=usage,
+                finish_reason=finish_reason,
+                request_id=request_id,
+                response_id=response_id,
+                latency_ms=latency_ms,
+                error=None,
+            )
 
         messages.append(answer)
 
