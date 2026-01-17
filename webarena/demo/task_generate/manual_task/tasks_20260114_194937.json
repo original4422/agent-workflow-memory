@@ -224,6 +224,162 @@
     "sites": [
       "shopping_admin"
     ],
+    "task_id": 71,
+    "require_login": true,
+    "geolocation": null,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "intent": "From the Magento Admin page, click 'REPORTS' in the navigation menu, then click 'Bestsellers' under the 'Products' section to open the Bestsellers Report page. Set Period to Month (if not already). Set the From date to 1/1/2022 and the To date to 1/31/2022. Finally, confirm the date range you set. After confirming the date range you set, click 'Show Report' to get report and describe the report.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Jan 8, 2022",
+          "Bolo Sport Watch"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 72,
+    "require_login": true,
+    "geolocation": null,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "intent": "click 'REPORTS' in the left slidebar, then click 'Bestsellers' under the 'Products' section to open the Bestsellers Report page. Set Period to Month (if not already). Set the From date to 1/1/2022 and the To date to 1/31/2022. Finally, confirm the date range you set. After confirming the date range you set, click 'Show Report' to get report and describe the report.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Jan 8, 2022",
+          "Bolo Sport Watch"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 73,
+    "require_login": true,
+    "geolocation": null,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "intent": "click 'REPORTS' between 'CONTENT' and 'STORES', then click 'Bestsellers' under the 'Products' section to open the Bestsellers Report page. Set Period to Month (if not already). Set the From date to 1/1/2022 and the To date to 1/31/2022. Finally, confirm the date range you set. After confirming the date range you set, click 'Show Report' to get report and describe the report.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Jan 8, 2022",
+          "Bolo Sport Watch"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 74,
+    "require_login": true,
+    "geolocation": null,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "intent": "Please complete the following steps to analyze the Bestsellers Report: 1.Click 'REPORTS' in the left slidebar (between 'CONTENT' and 'STORES').\n2.Click 'Bestsellers' under the 'Products' section.\n3.Set the 'Period' filter to 'Month'.\n4.Set the date range from '1/1/2022' to '1/31/2022' and apply the changes.\n5.Click the 'Show Report' button.\n6.Summarize the information shown in the report.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Jan 8, 2022",
+          "Bolo Sport Watch"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 75,
+    "require_login": true,
+    "geolocation": null,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "intent": "Please complete the following steps: 1.Click 'REPORTS' in the left slidebar (between 'CONTENT' and 'STORES').\n2.Click 'Bestsellers' under the 'Products' section.\n3.Set the 'Period' filter to 'Month'.\n4.Set the date range from '1/1/2022' to '1/31/2022' and apply the changes.\n5.Click the 'Show Report' button.\n6.Summarize the information shown in the report.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Jan 8, 2022",
+          "Bolo Sport Watch"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
+    "task_id": 76,
+    "require_login": true,
+    "geolocation": null,
+    "storage_state": "./.auth/shopping_admin_state.json",
+    "start_url": "http://166.111.53.249:7780/admin",
+    "intent": "Please complete the following steps: 1.Click 'REPORTS' in the left slidebar (between 'CONTENT' and 'STORES').\n2.Click 'Bestsellers' under the 'Products' section.\n3.Set the 'Period' filter to 'Month'.\n4.Set the date range from '1/1/2022' to '12/31/2022' and apply the changes.\n5.Click the 'Show Report' button.\n6.Summarize the information shown in the report.",
+    "eval": {
+      "eval_types": [
+        "string_match"
+      ],
+      "reference_answers": {
+        "must_include": [
+          "Jan 8, 2022",
+          "Bolo Sport Watch"
+        ]
+      },
+      "reference_url": "",
+      "program_html": [],
+      "string_note": ""
+    },
+    "require_reset": false
+  },
+  {
+    "sites": [
+      "shopping_admin"
+    ],
     "task_id": 8,
     "require_login": true,
     "geolocation": null,
@@ -254,7 +410,7 @@
     "geolocation": null,
     "storage_state": "./.auth/shopping_admin_state.json",
     "start_url": "http://166.111.53.249:7780/admin",
-    "intent": "From the Magento Admin page, click 'REPORTS' in the navigation menu, then click 'Bestsellers' under the 'Products' section to open the Bestsellers Report page. Set Period to Month, From to 1/1/2022, and To to 1/31/2022, then click 'Show Report'. Describe the results table you see and explicitly list the column headers.",
+    "intent": "From the Magento Admin page, click 'REPORTS' in the navigation menu, then click 'Bestsellers' under the 'Products' section to open the Bestsellers Report page. Set Period to Month, From to 1/1/2022, and To to 1/31/2022, then click 'Show Report'. Describe the results table you see and explicitly list the table after clicking 'Show Report'.",
     "eval": {
       "eval_types": [
         "string_match"
