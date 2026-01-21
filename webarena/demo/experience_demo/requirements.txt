@@ -1,0 +1,7 @@
+sentence-transformers
+numpy
+pillow
+playwright
+openai
+azure-identity
+azure-identity-broker
