@@ -340,3 +340,211 @@ legacy agent 在 call LLM 之前会进行 token 预算：
 
 这些文件有助于理解 OpenAI SDK 的 messages 结构，但它们不包含 legacy agent 的重试与 conversation logging 机制。
 
+---
+
+## 5. 补充问答：信息从哪来 / message 如何构成 / response 如何处理
+
+本节以 legacy agent 的主流程为准（`webarena/agents/legacy/agent.py`），把常见问题按“信息来源 → messages → response 处理与执行”串起来。
+
+### 5.a LLM 使用的信息从何而来？
+
+#### 5.a.i action_set 是如何获取到的？又是如何告诉 LLM 的？（放在 message 哪部分？）
+
+**action_set 的来源（运行时选择）**
+
+- CLI 入口 `webarena/run.py` 通过 `--action_space` 指定动作空间类型（如 `bid`、`coord`、`bid+nav` 等）。
+	- 参数定义：[webarena/run.py](../run.py#L86-L96)
+
+- legacy agent 初始化时会把 `flags.action_space` 映射为 BrowserGym 的 `AbstractActionSet` 实例：
+	- `GenericAgent.__init__` 里设置：`self.action_set = dynamic_prompting._get_action_space(self.flags)`
+		- 代码位置：[webarena/agents/legacy/agent.py](../agents/legacy/agent.py#L65-L76)
+	- 映射逻辑本身在 `_get_action_space(flags)`：按 `flags.action_space` 选择 `PythonActionSet` 或 `HighLevelActionSet(subsets=...)`。
+		- 代码位置：[webarena/agents/legacy/dynamic_prompting.py](../agents/legacy/dynamic_prompting.py#L474-L509)
+
+**action_set 是如何“告诉 LLM”的（属于 user prompt / HumanMessage）**
+
+- `MainPrompt` 在生成 user prompt 时，会把 `ActionSpace` 这一段拼进 prompt 文本（`# Action space:` + `action_space.describe()` + 示例 action）。
+	- `MainPrompt._prompt` 把 `self.action_space.prompt` 拼到最终 prompt 中：[webarena/agents/legacy/dynamic_prompting.py](../agents/legacy/dynamic_prompting.py#L374-L426)
+	- `ActionSpace.__init__` 构造 `# Action space:\n{describe()}` 与 `<action>...</action>` 示例：[webarena/agents/legacy/dynamic_prompting.py](../agents/legacy/dynamic_prompting.py#L440-L457)
+
+- 在 LLM API 的 messages 结构上：Action space **不在 system message**，而是作为 user message content 的一部分（`HumanMessage(content=prompt)`）。
+	- messages 组装位置：[webarena/agents/legacy/agent.py](../agents/legacy/agent.py#L117-L131)
+
+#### 5.a.ii web 的页面信息有哪些？如何获取到的？又是如何告诉 LLM 的？
+
+**页面信息有哪些（在 prompt 中的 Observation 区）**
+
+- HTML（默认是 `pruned_html`，也可能切换为其它 `flags.html_type`）
+- 可访问性树 AXTree（文本化后的 `axtree_txt`，可选择是否带坐标）
+- 上一步 action 的报错日志（`last_action_error`，可选）
+- 截图（`screenshot`，可选；视觉模型走 multi-part content）
+
+对应 prompt 组装：`Observation` 会把这些字段渲染为 `# Observation of current step:` 段，并在开启截图时把 prompt 从 `str` 升级为 `[{type:text}, {type:image_url}]`。
+
+- `Observation` 读取 `obs[flags.html_type]`、`obs["axtree_txt"]`、`obs["last_action_error"]` 并构造 prompt：
+	- 代码位置：[webarena/agents/legacy/dynamic_prompting.py](../agents/legacy/dynamic_prompting.py#L256-L286)
+- `Observation.add_screenshot()` 注入 `image_url(data:...base64,...)`：
+	- 代码位置：[webarena/agents/legacy/dynamic_prompting.py](../agents/legacy/dynamic_prompting.py#L287-L299)
+
+**这些页面字段是如何获取到的（来自 env obs + agent 的 obs_preprocessor）**
+
+- 环境每一步会返回一个 observation dict；legacy agent 通过 `obs_preprocessor()` 把结构化 DOM/AXTree 转成可喂给 LLM 的文本字段：
+	- `dom_txt = flatten_dom_to_str(obs["dom_object"], ...)`
+	- `axtree_txt = flatten_axtree_to_str(obs["axtree_object"], ...)`
+	- `pruned_html = prune_html(dom_txt)`
+	- 代码位置：[webarena/agents/legacy/agent.py](../agents/legacy/agent.py#L36-L61)
+
+**如何“告诉 LLM”（属于 user prompt / HumanMessage）**
+
+- 这些页面信息最终都被拼接进 `prompt = fit_tokens(MainPrompt(...))`，并作为 `HumanMessage(content=prompt)` 的 content 发送。
+	- 代码位置：[webarena/agents/legacy/agent.py](../agents/legacy/agent.py#L93-L131)
+
+### 5.b 每次调用 LLM 时传入的 message 是如何构成的？
+
+**一次 step 的第 1 次调用（初始 messages）**
+
+- system：`SystemPrompt().prompt` +（可选）workflow 文件内容
+- user：`MainPrompt` 渲染出的完整 prompt（包含 instructions/observation/history/action space/think/memory 等；可能含截图 multi-part content）
+
+对应代码：
+
+- system prompt + workflow 拼接：[webarena/agents/legacy/agent.py](../agents/legacy/agent.py#L117-L125)
+- 初始 messages 列表 `[SystemMessage, HumanMessage]`：[webarena/agents/legacy/agent.py](../agents/legacy/agent.py#L126-L131)
+
+**同一个 step 内的重试调用（messages 会“变长”）**
+
+当解析失败时，`retry()` 会在同一个 `messages` list 上追加：
+
+1) 追加 assistant 原始回答（`messages.append(answer)`）
+2) 追加一条 user 的纠错/重试提示（`messages.append(HumanMessage(content=retry_message))`）
+
+- 追加 assistant + 追加 retry user message：[webarena/agents/legacy/utils/llm_utils.py](../agents/legacy/utils/llm_utils.py#L175-L194)
+
+这也是为什么一次 step 内的 messages 会从 `[system, user]` 变成：
+
+- `[system, user, assistant, user(retry), assistant, user(retry), ...]`
+
+### 5.c 如何对 response 进行处理？
+
+#### 5.c.i 拿到 response 后会进行什么解析吗？
+
+解析发生在 `GenericAgent.get_action()` 里传给 `retry()` 的 `parser()`：
+
+- `parser()` 调用 `main_prompt._parse_answer(text)`：解析 `<think>`、`<memory>`（可选）与 `<action>`（必需）。
+	- `GenericAgent.get_action()` 的 parser 定义：[webarena/agents/legacy/agent.py](../agents/legacy/agent.py#L133-L147)
+	- `MainPrompt._parse_answer()` 聚合 think/memory/action 的解析：[webarena/agents/legacy/dynamic_prompting.py](../agents/legacy/dynamic_prompting.py#L428-L437)
+
+底层解析规则：
+
+- 通过正则提取形如 `<action>...</action>` 的 tag 内容；缺失必需 tag 会返回 `retry_message`（例如 `Missing the key <action> in the answer.`）。
+	- `parse_html_tags_raise()` + `parse_html_tags()`：[webarena/agents/legacy/utils/llm_utils.py](../agents/legacy/utils/llm_utils.py#L434-L487)
+
+另外，action 会做一次“能否映射到可执行 python 动作”的校验：
+
+- `ActionSpace._parse_answer()` 调 `self.action_space.to_python_code(ans_dict["action"])`，只做校验不改写 action 文本；失败会抛 `ParseError`。
+	- 代码位置：[webarena/agents/legacy/dynamic_prompting.py](../agents/legacy/dynamic_prompting.py#L458-L472)
+
+#### 5.c.ii 如何执行 response 给出的 action 的？
+
+执行链路是：agent 产出 action 字符串 → BrowserGym loop 把 action 发给 env.step（内部用 action_mapping 转成可执行动作并驱动浏览器）。
+
+- loop 创建环境时把 `agent.action_set.to_python_code` 作为 `action_mapping` 注入环境：
+	- 代码位置：[myenv/webarena/lib/python3.10/site-packages/browsergym/experiments/loop.py](../../myenv/webarena/lib/python3.10/site-packages/browsergym/experiments/loop.py#L397-L406)
+- 每一步执行时直接 `env.step(action)`：
+	- 代码位置：[myenv/webarena/lib/python3.10/site-packages/browsergym/experiments/loop.py](../../myenv/webarena/lib/python3.10/site-packages/browsergym/experiments/loop.py#L187-L201)
+
+legacy agent 自身只负责返回 action：
+
+- `return ans_dict["action"], ans_dict`：[webarena/agents/legacy/agent.py](../agents/legacy/agent.py#L176-L179)
+
+#### 5.c.iii 当 response 解析错误时，是如何处理的？此时再调用 LLM 时，message 如何构成？
+
+**解析错误如何触发重试**
+
+- 如果 `main_prompt._parse_answer()` 抛出 `ParseError`，`parser()` 会把它转成 `(None, False, str(e))` 交给 `retry()` 处理。
+	- 代码位置：[webarena/agents/legacy/agent.py](../agents/legacy/agent.py#L133-L145)
+
+**重试时 messages 如何构成（是否把错误信息放到 message 里？）**
+
+- 是的：错误信息会被作为一条新的 **user message** 追加到 messages 中（`HumanMessage(content=retry_message)`）。不会额外加新的 system message。
+	- 追加逻辑：[webarena/agents/legacy/utils/llm_utils.py](../agents/legacy/utils/llm_utils.py#L183-L194)
+
+这里的 `retry_message` 可能来自两类：
+
+- tag 缺失/重复等格式错误（例如缺 `<action>`）：由 `parse_html_tags()` 生成的 `retry_message`。
+	- 代码位置：[webarena/agents/legacy/utils/llm_utils.py](../agents/legacy/utils/llm_utils.py#L458-L487)
+- action 不在允许动作空间内/无法映射：由 `ActionSpace._parse_answer()` 抛出的 `ParseError("Error while parsing action...")`。
+	- 代码位置：[webarena/agents/legacy/dynamic_prompting.py](../agents/legacy/dynamic_prompting.py#L458-L472)
+
+**超过最大重试次数**
+
+- `retry()` 最终会抛 `ValueError`；`GenericAgent.get_action()` 捕获后返回 `action=None`，并把错误信息与堆栈记录到 `ans_dict`。
+	- 捕获与降级返回：[webarena/agents/legacy/agent.py](../agents/legacy/agent.py#L155-L175)
+
+### 5.d 不同 action_space 的区别与示例
+
+`action_space` 决定了 Agent 可用的动作集合。WebArena 基于 BrowserGym 实现了多种动作空间，通过 `--action_space` 参数进行配置。
+
+#### 5.d.i 动作空间类型详解
+
+| 类型 | 包含子集 | 说明 |
+| :--- | :--- | :--- |
+| `python` | - | **原生 Python 模式**。Agent 直接输出 Playwright 代码。灵活性最高，但对模型编码能力要求极高。 |
+| `bid` | `chat`, `bid` | **基于 ID 的高层动作**。使用浏览器生成的 `bid`（Backend ID）来定位元素，如 `click("32")`。 |
+| `coord` | `chat`, `coord` | **基于坐标的高层动作**。使用像素坐标操作，如 `click(450, 600)`。适用于无传统 ID 的视觉元素。 |
+| `nav` | - | **导航动作**。通常与其他空间组合使用，提供浏览器的前进、后退、刷新、滚动等功能。 |
+| `混合模式` | `bid+coord+nav` 等 | **最强组合**。提供最全面的操作手段，是当前 WebArena 评估中的主流配置。 |
+
+#### 5.d.ii 动作示例（LLM 输出格式）
+
+根据 `ActionSpace` 的定义，LLM 返回的动作必须包裹在 `<action>` 标签内。
+
+**1. Python 模式示例**
+```python
+<action>
+page.get_by_role("button", name="Submit").click()
+</action>
+```
+
+**2. bid 模式示例（最常用）**
+```python
+<action>
+click("32")
+</action>
+<action>
+fill("a12", "WebArena project")
+</action>
+```
+
+**3. coord 模式示例**
+```python
+<action>
+click(128, 456)
+</action>
+```
+
+**4. nav 模式示例**
+```python
+<action>
+go_back()
+</action>
+<action>
+scroll(0, 500)
+</action>
+```
+
+**5. chat 模式示例（与用户交互）**
+```python
+<action>
+answer("I have found the top-5 best selling products for you.")
+</action>
+```
+
+#### 5.d.iii 官方引用与背景
+
+WebArena 官方已将底层架构迁移至 [BrowserGym](https://github.com/ServiceNow/BrowserGym)，这使得动作空间更加标准化和可扩展。
+
+- **官方文档说明**：参考 [WebArena 仓库 README](https://github.com/web-arena-x/webarena#quick-walkthrough) 中提到的 `create_id_based_action` 与 `observation_type`。
+- **BrowserGym 集成**：本地代码 `_get_action_space` 逻辑清晰展示了子集（subsets）的组合方式。
+	- 代码位置：[webarena/agents/legacy/dynamic_prompting.py](../agents/legacy/dynamic_prompting.py#L474-L509)
+
