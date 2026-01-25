@@ -79,13 +79,14 @@ def save_screenshot_from_obs(obs: Dict[str, Any], screenshots_dir: Path, step: i
 
 
 class TraceWriter:
-    def __init__(self, run_dir: Path):
-        """Create a JSONL trace writer under `run_dir`."""
-        self.run_dir = run_dir
-        self.run_dir.mkdir(parents=True, exist_ok=True)
-        self.trace_path = self.run_dir / "trace.jsonl"
-        self.summary_path = self.run_dir / "summary.json"
-        self.screenshots_dir = self.run_dir / "screenshots"
+    def __init__(self, log_dir: Path):
+        """Create a JSONL trace writer under `log_dir`."""
+        self._log_dir = log_dir
+        self.dir = log_dir / "trace" 
+        self.dir.mkdir(parents=True, exist_ok=True)
+        self.trace_path = self.dir / "trace.jsonl"
+        self.summary_path = self.dir / "summary.json"
+        self.screenshots_dir = self.dir / "screenshots"
         self._fp = self.trace_path.open("a", encoding="utf-8")
 
     def write_event(self, event_type: str, payload: Dict[str, Any]) -> None:

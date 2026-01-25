@@ -17,6 +17,7 @@ from ..retrieval.index import ExperienceIndex, build_or_load_index
 from ..retrieval.retrieve import RetrievedExperience, retrieve_top_k
 from ..trace.types import RetrievalTrace, StepTrace
 from ..trace.writer import TraceWriter
+from experience_demo.trace.conversation_history import ConversationHistoryWriter
 from .actions import extract_action_text, validate_action
 from .prompting import build_system_prompt, build_user_prompt
 
@@ -75,7 +76,7 @@ class ExperienceDemoAgent(Agent):
         max_retry: int,
         max_obs_chars: int,
         max_history_turns: int,
-        run_dir: Optional[Path] = None,
+        log_dir: Optional[Path] = None,
     ) -> None:
         super().__init__()
 
@@ -100,7 +101,8 @@ class ExperienceDemoAgent(Agent):
 
         self._client = LLMClient.make_llm_client(self.model_provider)
 
-        self._trace: Optional[TraceWriter] = TraceWriter(run_dir) if run_dir else None
+        self._trace: Optional[TraceWriter] = TraceWriter(log_dir) if log_dir else None
+        self._conv: Optional[ConversationHistoryWriter] = ConversationHistoryWriter(Path(log_dir)) if log_dir else None
 
     def close(self) -> None:
         """Close resources held by the agent (e.g., trace writer)."""
@@ -193,12 +195,21 @@ class ExperienceDemoAgent(Agent):
             messages.extend(self._chat_history)
         messages.append({"role": "user", "content": user_prompt})
 
+        if self._conv is not None:
+            self._conv.ensure_system(system_prompt)
+
         resp = self._client.chat.completions.create(
             model=self.model_name,
             messages=messages,
             temperature=0.2,
         )
-        return (resp.choices[0].message.content or "").strip()
+        assistant = (resp.choices[0].message.content or "").strip()
+
+        # Record every request (including retries) as a (user, assistant) pair.
+        if self._conv is not None:
+            self._conv.append_pair(user=user_prompt, assistant=assistant)
+
+        return assistant
 
     def _push_history(self, user: str, assistant: str) -> None:
         """Append one user/assistant turn to the rolling chat history."""
@@ -315,12 +326,12 @@ class ExperienceDemoAgentArgs(AbstractAgentArgs):
     max_retry: int = 5
     max_obs_chars: int = 8000
     max_history_turns: int = 4
-    run_dir: str = ""
+    log_dir: str = ""
 
     def make_agent(self) -> Agent:
         """Instantiate the agent."""
         experiences_path = Path(self.experiences_path)
-        run_dir = Path(self.run_dir) if self.run_dir else None
+        log_dir = Path(self.log_dir) if self.log_dir else None
         return ExperienceDemoAgent(
             model_provider=self.model_provider,
             model_name=self.model_name,
@@ -332,5 +343,5 @@ class ExperienceDemoAgentArgs(AbstractAgentArgs):
             max_retry=self.max_retry,
             max_obs_chars=self.max_obs_chars,
             max_history_turns=self.max_history_turns,
-            run_dir=run_dir,
+            log_dir=log_dir,
         )

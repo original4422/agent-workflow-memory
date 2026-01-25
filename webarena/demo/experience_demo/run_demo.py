@@ -117,6 +117,30 @@ def _install_webarena_task_config_monkeypatch(config_text: str) -> None:
     importlib_resources.files = _files_override
 
 
+def _unique_path(path: Path) -> Path:
+    """Return a non-existing path by appending a numeric suffix when needed."""
+    if not path.exists():
+        return path
+    base = path
+    for i in range(1, 10_000):
+        candidate = Path(str(base) + f"__{i}")
+        if not candidate.exists():
+            return candidate
+    raise RuntimeError(f"Failed to find unique path for: {path}")
+
+
+def _archive_exp_dir(*, exp_dir: Path, dest_root: Path, mode: str) -> Path:
+    """Move exp_dir into dest_root/runs with a stable, readable name."""
+    runs_root = dest_root / "runs"
+    runs_root.mkdir(parents=True, exist_ok=True)
+
+    dest = runs_root / f"{mode}"
+    dest = _unique_path(dest)
+
+    os.rename(exp_dir, dest)
+    return dest
+
+
 def _run_once(
     *,
     task_name: str,
@@ -130,6 +154,7 @@ def _run_once(
     top_k: int,
     embedding_model: str,
     exp_root: Path,
+    archive_root: Path,
     experiences_path: Path,
     # storage_state_path: Path,
 ) -> Dict[str, Any]:
@@ -174,7 +199,7 @@ def _run_once(
         max_retry=5,
         max_obs_chars=8000,
         max_history_turns=4,
-        run_dir="",  # filled after prepare
+        log_dir="",  # filled after prepare
     )
 
     mode = "with_exp" if use_experience else "baseline"
@@ -183,7 +208,7 @@ def _run_once(
     exp_args.prepare(exp_root=exp_root)
 
     # now that exp_dir exists, route demo trace to a subfolder
-    exp_args.agent_args.run_dir = str(Path(exp_args.exp_dir) / "experience_demo")
+    exp_args.agent_args.log_dir = str(Path(exp_args.exp_dir) / "logs")
 
     exp_args.run()
 
@@ -198,8 +223,10 @@ def _run_once(
     except Exception:
         success = False
 
+    archived_exp_dir = _archive_exp_dir(exp_dir=Path(exp_args.exp_dir), dest_root=archive_root, mode=mode)
+
     return {
-        "exp_dir": str(exp_args.exp_dir),
+        "exp_dir": str(archived_exp_dir),
         "mode": mode,
         "success": success,
         "summary_info": summary_info,
@@ -225,21 +252,35 @@ def main() -> None:
     if not task_config_path.exists():
         raise FileNotFoundError(f"Task config not found: {task_config_path}")
 
-    if args.task_name.startswith("webarena."):
+    use_monkeypatch = bool(args.task_config_path) and args.task_name.startswith("webarena.")
+    if use_monkeypatch:
         config_text = task_config_path.read_text(encoding="utf-8")
         # patched = _patch_task_config_text(config_text, args.task_name, storage_state_path)
         _install_webarena_task_config_monkeypatch(config_text)
 
-    results_root = here / "results"
-    results_root.mkdir(parents=True, exist_ok=True)
+    # Base dir: results/{source}/{config_stem}/custom.{task_name}/{timestamp_model}/
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp_model = f"{timestamp}_{args.model_name}_{args.model_provider}"
 
-    suite_dir: Path
-    if args.suite:
-        stamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        suite_dir = results_root / f"{stamp}_suite_{args.task_name}_{args.model_provider}_{args.model_name}"
-        suite_dir.mkdir(parents=True, exist_ok=True)
-    else:
-        suite_dir = results_root
+    source = "raw"
+    if use_monkeypatch:
+        if "manual_task" in str(task_config_path):
+            source = "manual_task"
+        elif "generated_task" in str(task_config_path):
+            source = "generated_task"
+
+    config_stem = Path(args.task_config_path).stem
+
+    results_root = here / "results"
+    tmp_root = results_root / "tmp"
+    suite_dir = (
+        results_root
+        / source
+        / config_stem
+        / f"custom.{args.task_name}"
+        / timestamp_model
+    )
+    suite_dir.mkdir(parents=True, exist_ok=True)
 
     records: List[Dict[str, Any]] = []
 
@@ -258,7 +299,8 @@ def main() -> None:
                         use_experience=mode_use_exp,
                         top_k=args.top_k,
                         embedding_model=args.embedding_model,
-                        exp_root=suite_dir,
+                        exp_root=tmp_root,
+                        archive_root=suite_dir,
                         experiences_path=experiences_path,
                         # storage_state_path=storage_state_path,
                     )
@@ -276,7 +318,8 @@ def main() -> None:
                 use_experience=args.use_experience,
                 top_k=args.top_k,
                 embedding_model=args.embedding_model,
-                exp_root=suite_dir,
+                exp_root=tmp_root,
+                archive_root=suite_dir,
                 experiences_path=experiences_path,
                 # storage_state_path=storage_state_path,
             )

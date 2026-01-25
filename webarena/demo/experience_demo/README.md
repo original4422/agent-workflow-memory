@@ -71,8 +71,8 @@ myenv/webarena/bin/python webarena/demo/experience_demo/run_demo.py --suite true
 
 入口脚本：`run_demo.py`
 
-- 单次运行：直接在 `results/` 下创建 BrowserGym experiment 目录
-- suite 模式：在 `results/<timestamp>_suite_.../` 下运行 baseline/with-exp 各 `n_runs` 次，并写出 `report.md`/`report.json`
+- 单次运行：BrowserGym experiment 目录首先在临时路径生成，运行结束后会自动移动到 `webarena/demo/experience_demo/results/{config_path_stem}/{task_name}/{timestamp}/` 这种结构化目录下。实验目录下除了 `trace.jsonl` 外，还包含 `conversation_history/conversation_history.json`，记录了完整的 LLM 会话历史（标准 OpenAI 消息格式）。
+- suite 模式：在 `results/<timestamp>_suite_.../` 下运行 baseline/with-exp 各 `n_runs` 次，并写出 `report.md`/`report.json`。
 
 ## 运行前置条件（必须）
 
