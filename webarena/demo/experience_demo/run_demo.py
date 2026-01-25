@@ -39,7 +39,8 @@ def parse_args() -> argparse.Namespace:
 	p = argparse.ArgumentParser()
 	p.add_argument("--task_name", type=str, default="webarena.1")
 	p.add_argument("--task_config_path", type=str, default=str(Path(__file__).resolve().parents[2] / "config_files" / "test.raw.json"))
-	p.add_argument("--model_name", type=str, default="cloudgpt/gpt-4.1-20250414")
+	p.add_argument("--model_provider", type=str, default="cloudgpt")
+	p.add_argument("--model_name", type=str, default="gpt-4.1-20250414")
 	p.add_argument("--headless", type=str2bool, default=True)
 	p.add_argument("--slow_mo", type=int, default=30)
 	p.add_argument("--max_steps", type=int, default=30)
@@ -111,13 +112,10 @@ def _install_webarena_task_config_monkeypatch(config_text: str) -> None:
 	importlib_resources.files = _files_override
 
 
-def _model_tag(model_name: str) -> str:
-	return model_name.replace("/", "_").replace(":", "_")
-
-
 def _run_once(
 	*,
 	task_name: str,
+	model_provider: str,
 	model_name: str,
 	headless: bool,
 	slow_mo: int,
@@ -142,6 +140,7 @@ def _run_once(
 	)
 
 	agent_args = ExperienceDemoAgentArgs(
+		model_provider=model_provider,
 		model_name=model_name,
 		use_experience=use_experience,
 		top_k=top_k,
@@ -156,7 +155,7 @@ def _run_once(
 
 	mode = "with_exp" if use_experience else "baseline"
 	exp_args = ExpArgs(agent_args=agent_args, env_args=env_args)
-	exp_args.exp_name = f"ExperienceDemo_{mode}_{_model_tag(model_name)}"
+	exp_args.exp_name = f"ExperienceDemo_{mode}_{model_provider}_{model_name}"
 	exp_args.prepare(exp_root=exp_root)
 
 	# now that exp_dir exists, route demo trace to a subfolder
@@ -212,7 +211,7 @@ def main() -> None:
 	suite_dir: Path
 	if args.suite:
 		stamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-		suite_dir = results_root / f"{stamp}_suite_{args.task_name}_{_model_tag(args.model_name)}"
+		suite_dir = results_root / f"{stamp}_suite_{args.task_name}_{args.model_provider}_{args.model_name}"
 		suite_dir.mkdir(parents=True, exist_ok=True)
 	else:
 		suite_dir = results_root
@@ -225,6 +224,7 @@ def main() -> None:
 				records.append(
 					_run_once(
 						task_name=args.task_name,
+						model_provider=args.model_provider,
 						model_name=args.model_name,
 						headless=args.headless,
 						slow_mo=args.slow_mo,
@@ -242,6 +242,7 @@ def main() -> None:
 		records.append(
 			_run_once(
 				task_name=args.task_name,
+				model_provider=args.model_provider,
 				model_name=args.model_name,
 				headless=args.headless,
 				slow_mo=args.slow_mo,
@@ -258,6 +259,7 @@ def main() -> None:
 
 	report = {
 		"task_name": args.task_name,
+		"model_provider": args.model_provider,
 		"model_name": args.model_name,
 		"obs_mode": args.obs_mode,
 		"top_k": args.top_k,
@@ -282,6 +284,7 @@ def main() -> None:
 		f"# Experience Demo Report",
 		f"",
 		f"- task_name: {args.task_name}",
+		f"- model_provider: {args.model_provider}",
 		f"- model_name: {args.model_name}",
 		f"- obs_mode: {args.obs_mode}",
 		f"- top_k: {args.top_k}",

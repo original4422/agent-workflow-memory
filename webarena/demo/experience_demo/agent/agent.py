@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import dataclasses
-import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -10,7 +9,8 @@ from browsergym.experiments import Agent, AbstractAgentArgs
 from browsergym.utils.obs import flatten_axtree_to_str, flatten_dom_to_str, prune_html
 
 import openai
-from azure.identity import DefaultAzureCredential
+
+from ..cloudgpt_aoai.cloudgpt_aoai import get_openai_client
 
 from ..retrieval.embedder import Embedder
 from ..retrieval.index import ExperienceIndex, build_or_load_index
@@ -32,18 +32,23 @@ def _clip(text: str, max_chars: int) -> str:
 	return head + "\n...<clipped>...\n" + tail
 
 
-def _make_cloudgpt_client() -> openai.AzureOpenAI:
-	scope = "api://feb7b661-cac7-44a8-8dc1-163b63c23df2/.default"
-	credential = DefaultAzureCredential()
+class LLMClient:
+	@staticmethod
+	def make_llm_client(model_provider: str) -> openai.AzureOpenAI:
+		provider = (model_provider or "").strip().lower()
+		if provider in ("cloudgpt", "azure"):
+			return LLMClient._make_cloudgpt_client()
+		raise ValueError(
+			"Unsupported model_provider: "
+			+ repr(model_provider)
+			+ ". Supported: cloudgpt"
+		)
 
-	def token_provider() -> str:
-		return credential.get_token(scope).token
-
-	return openai.AzureOpenAI(
-		api_version=os.environ.get("CLOUDGPT_AOAI_API_VERSION", "2024-06-01"),
-		azure_endpoint=os.environ.get("CLOUDGPT_AOAI_ENDPOINT", "https://cloudgpt-openai.azure-api.net/"),
-		azure_ad_token_provider=token_provider,
-	)
+	@staticmethod
+	def _make_cloudgpt_client() -> openai.AzureOpenAI:
+		# Intentionally use ONLY the official CloudGPT AOAI helper.
+		# Do not read environment variables or fall back to DefaultAzureCredential here.
+		return get_openai_client()
 
 
 class ExperienceDemoAgent(Agent):
@@ -57,6 +62,7 @@ class ExperienceDemoAgent(Agent):
 
 	def __init__(
 		self,
+		model_provider: str,
 		model_name: str,
 		use_experience: bool,
 		top_k: int,
@@ -70,6 +76,7 @@ class ExperienceDemoAgent(Agent):
 	) -> None:
 		super().__init__()
 
+		self.model_provider = model_provider
 		self.model_name = model_name
 		self.use_experience = use_experience
 		self.top_k = top_k
@@ -88,7 +95,7 @@ class ExperienceDemoAgent(Agent):
 		self._embedder = Embedder(model_name=self.embedding_model_name)
 		self._index: Optional[ExperienceIndex] = None
 
-		self._client = _make_cloudgpt_client()
+		self._client = LLMClient.make_llm_client(self.model_provider)
 
 		self._trace: Optional[TraceWriter] = TraceWriter(run_dir) if run_dir else None
 
@@ -278,7 +285,8 @@ class ExperienceDemoAgent(Agent):
 
 @dataclasses.dataclass
 class ExperienceDemoAgentArgs(AbstractAgentArgs):
-	model_name: str = "cloudgpt/gpt-4.1-20250414"
+	model_provider: str = "cloudgpt"
+	model_name: str = "gpt-4.1-20250414"
 	use_experience: bool = False
 	top_k: int = 3
 	embedding_model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
@@ -293,6 +301,7 @@ class ExperienceDemoAgentArgs(AbstractAgentArgs):
 		experiences_path = Path(self.experiences_path)
 		run_dir = Path(self.run_dir) if self.run_dir else None
 		return ExperienceDemoAgent(
+			model_provider=self.model_provider,
 			model_name=self.model_name,
 			use_experience=self.use_experience,
 			top_k=self.top_k,

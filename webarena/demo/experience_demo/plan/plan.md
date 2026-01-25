@@ -7,7 +7,7 @@
 - 运行两组实验：
   - **Baseline（无经验）**：不注入经验，允许偶尔成功，但统计上更差。
   - **With-Experience（检索 top-3 经验）**：通过 embedding 相似度检索最相关的 3 条人工经验，注入上下文后再跑，期望成功率更高。
-- 固定模型：`cloudgpt/gpt-4.1-20250414`
+- 固定模型：`model_provider=cloudgpt` + `model_name=gpt-4.1-20250414`（实际 LLM 调用只用裸 model name）
 
 ## 约束与原则
 - **自包含约束（最重要）**：experience_demo 目录之外的仓库代码只能用于“阅读参考”，不能被直接 import/调用；需要在 experience_demo 内实现完整闭环（实验入口、agent、经验检索、trace 产物）。
@@ -36,7 +36,7 @@
 - Intent：`What is the top-1 best-selling brand in Quarter 1 2022`
 - 参考答案（string_match）：`Sprite`
 - Task 配置来源：默认覆盖为 [webarena/config_files/test.raw.json](../../config_files/test.raw.json)
-- Model：`cloudgpt/gpt-4.1-20250414`
+- Model：`model_provider=cloudgpt` + `model_name=gpt-4.1-20250414`
 - 统计对比：baseline / with-experience 各运行 3 次
 
 ## 运行前置条件（必须）

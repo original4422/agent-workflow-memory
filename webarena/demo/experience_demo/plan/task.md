@@ -7,7 +7,7 @@
 - Task：`webarena.1`
 - Intent：`What is the top-1 best-selling brand in Quarter 1 2022`
 - 目标答案：`Sprite`
-- Model：`cloudgpt/gpt-4.1-20250414`
+- Model：`model_provider=cloudgpt` + `model_name=gpt-4.1-20250414`
 - Task config override：使用 [webarena/config_files/test.raw.json](../../config_files/test.raw.json)
 
 ## 1. 初始化目录与依赖
@@ -106,7 +106,8 @@ schema 要求（本 demo 固定）：
 ## 6. 实验入口（复刻 run.py 结构）
 6.1 复刻 CLI。
 - [ ] `run_demo.py` 参数至少包含：
-  - `--model_name`（默认 cloudgpt/gpt-4.1-20250414）
+  - `--model_provider`（默认 cloudgpt）
+  - `--model_name`（默认 gpt-4.1-20250414；实际 LLM 调用只用裸 model name）
   - `--task_name`（默认 webarena.1）
   - `--task_config_path`（默认 ../../config_files/test.raw.json）
   - `--use_experience`（true/false）

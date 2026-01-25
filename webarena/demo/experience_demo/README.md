@@ -173,7 +173,8 @@ myenv/webarena/bin/python webarena/demo/experience_demo/run_demo.py \
 
 - `--task_name`：默认 `webarena.1`
 - `--task_config_path`：默认 `webarena/config_files/test.raw.json`（脚本内部会 monkeypatch 资源读取）
-- `--model_name`：默认 `cloudgpt/gpt-4.1-20250414`
+- `--model_provider`：默认 `cloudgpt`
+- `--model_name`：默认 `gpt-4.1-20250414`（LLM 调用时只用裸 model name；provider 用于选择 client）
 - `--obs_mode`：`axtree|html|both`（默认 `axtree`）
 - `--max_steps`：默认 `30`
 - `--headless`：默认 `true`
