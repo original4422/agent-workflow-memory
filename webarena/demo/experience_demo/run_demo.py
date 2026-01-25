@@ -52,8 +52,8 @@ def parse_args() -> argparse.Namespace:
 	return p.parse_args()
 
 
-def _patch_task_config_text(task_config_path: Path, task_name: str, storage_state_path: Path) -> str:
-	raw = json.loads(task_config_path.read_text(encoding="utf-8"))
+def _patch_task_config_text(config_text: str, task_name: str, storage_state_path: Path) -> str:
+	raw = json.loads(config_text)
 	if not isinstance(raw, list):
 		raise ValueError("Task config must be a JSON list")
 
@@ -128,7 +128,7 @@ def _run_once(
 	embedding_model: str,
 	exp_root: Path,
 	experiences_path: Path,
-	storage_state_path: Path,
+	# storage_state_path: Path,
 ) -> Dict[str, Any]:
 	env_args = EnvArgs(
 		task_name=task_name,
@@ -137,7 +137,7 @@ def _run_once(
 		headless=headless,
 		viewport={"width": 1500, "height": 1280},
 		slow_mo=slow_mo,
-		storage_state=str(storage_state_path),
+		# storage_state=str(storage_state_path),
 		task_kwargs=None,
 	)
 
@@ -191,19 +191,20 @@ def main() -> None:
 	if not experiences_path.exists():
 		raise FileNotFoundError(f"experiences.jsonl not found: {experiences_path}")
 
-	storage_state_path = here / ".auth" / "shopping_admin_state.json"
-	if not storage_state_path.exists():
-		raise FileNotFoundError(
-			"Missing storage_state. Create it at: " + str(storage_state_path)
-		)
+	# storage_state_path = here / ".auth" / "shopping_admin_state.json"
+	# if not storage_state_path.exists():
+	# 	raise FileNotFoundError(
+	# 		"Missing storage_state. Create it at: " + str(storage_state_path)
+	# 	)
 
 	task_config_path = Path(args.task_config_path).resolve()
 	if not task_config_path.exists():
 		raise FileNotFoundError(f"Task config not found: {task_config_path}")
 
 	if args.task_name.startswith("webarena."):
-		patched = _patch_task_config_text(task_config_path, args.task_name, storage_state_path)
-		_install_webarena_task_config_monkeypatch(patched)
+		config_text = task_config_path.read_text(encoding="utf-8")
+		# patched = _patch_task_config_text(config_text, args.task_name, storage_state_path)
+		_install_webarena_task_config_monkeypatch(config_text)
 
 	results_root = here / "results"
 	results_root.mkdir(parents=True, exist_ok=True)
@@ -234,7 +235,7 @@ def main() -> None:
 						embedding_model=args.embedding_model,
 						exp_root=suite_dir,
 						experiences_path=experiences_path,
-						storage_state_path=storage_state_path,
+						# storage_state_path=storage_state_path,
 					)
 				)
 	else:
@@ -251,7 +252,7 @@ def main() -> None:
 				embedding_model=args.embedding_model,
 				exp_root=suite_dir,
 				experiences_path=experiences_path,
-				storage_state_path=storage_state_path,
+				# storage_state_path=storage_state_path,
 			)
 		)
 
