@@ -195,9 +195,6 @@ class ExperienceDemoAgent(Agent):
             messages.extend(self._chat_history)
         messages.append({"role": "user", "content": user_prompt})
 
-        if self._conv is not None:
-            self._conv.ensure_system(system_prompt)
-
         resp = self._client.chat.completions.create(
             model=self.model_name,
             messages=messages,

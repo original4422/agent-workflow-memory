@@ -34,20 +34,6 @@ class ConversationHistoryWriter:
         tmp_path.write_text(data + "\n", encoding="utf-8")
         os.replace(tmp_path, self._path)
 
-    def ensure_system(self, system: str) -> None:
-        if not self._messages:
-            self._messages.append({"role": "system", "content": str(system)})
-            self._atomic_write()
-            return
-
-        first = self._messages[0]
-        if isinstance(first, dict) and first.get("role") == "system":
-            return
-
-        # If there are already messages but no system at the top, prepend it.
-        self._messages.insert(0, {"role": "system", "content": str(system)})
-        self._atomic_write()
-
     def append_pair(self, *, user: str, assistant: str) -> None:
         self._messages.append({"role": "user", "content": str(user)})
         self._messages.append({"role": "assistant", "content": str(assistant)})
