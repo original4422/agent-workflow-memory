@@ -7,6 +7,11 @@
 
 对比两种模式在同一 WebArena 任务上的成功率，并产出可复盘的 trace 与实验报告。
 
+## 代码规范（Code Style）
+
+- Python 代码统一使用 **4 空格缩进**（不使用 Tab）。
+- Docstring 以“精简准确”为主；仅对复杂/核心函数保留 `Args/Returns/Raises`。
+
 ## 一句话快速开始（Quickstart）
 
 从仓库根目录运行（推荐）：

@@ -11,43 +11,58 @@ from .index import Experience, ExperienceIndex
 
 @dataclass(frozen=True)
 class RetrievedExperience:
-	experience: Experience
-	score: float
+    experience: Experience
+    score: float
 
 
 def retrieve_top_k(
-	query: str,
-	index: ExperienceIndex,
-	embedder: Embedder,
-	top_k: int = 3,
-	site: Optional[str] = None,
+    query: str,
+    index: ExperienceIndex,
+    embedder: Embedder,
+    top_k: int = 3,
+    site: Optional[str] = None,
 ) -> List[RetrievedExperience]:
-	if not query or top_k <= 0:
-		return []
+    """Retrieve the top-k most relevant experiences using cosine similarity.
 
-	experiences = index.experiences
-	embeddings = index.embeddings
+    The index embeddings are expected to be row-wise L2-normalized. The query is
+    embedded and then scored via dot product.
 
-	if site:
-		mask = np.array([e.site == site for e in experiences], dtype=bool)
-		if mask.any():
-			experiences = [e for e in experiences if e.site == site]
-			embeddings = embeddings[mask]
+    Args:
+        query: Query string (typically the task goal).
+        index: ExperienceIndex containing experiences and embeddings.
+        embedder: Embedder used to embed the query.
+        top_k: Number of experiences to return.
+        site: Optional site filter (e.g., "shopping_admin").
 
-	q_vec = embedder.embed([query])
-	if q_vec.size == 0:
-		return []
+    Returns:
+        A list of `RetrievedExperience` sorted by decreasing score.
+    """
+    if not query or top_k <= 0:
+        return []
 
-	q = q_vec[0]
-	scores = embeddings @ q
-	k = min(top_k, int(scores.shape[0]))
-	if k <= 0:
-		return []
+    experiences = index.experiences
+    embeddings = index.embeddings
 
-	top_idx = np.argpartition(-scores, kth=k - 1)[:k]
-	top_idx = top_idx[np.argsort(-scores[top_idx])]
+    if site:
+        mask = np.array([e.site == site for e in experiences], dtype=bool)
+        if mask.any():
+            experiences = [e for e in experiences if e.site == site]
+            embeddings = embeddings[mask]
 
-	return [
-		RetrievedExperience(experience=experiences[i], score=float(scores[i]))
-		for i in top_idx.tolist()
-	]
+    q_vec = embedder.embed([query])
+    if q_vec.size == 0:
+        return []
+
+    q = q_vec[0]
+    scores = embeddings @ q
+    k = min(top_k, int(scores.shape[0]))
+    if k <= 0:
+        return []
+
+    top_idx = np.argpartition(-scores, kth=k - 1)[:k]
+    top_idx = top_idx[np.argsort(-scores[top_idx])]
+
+    return [
+        RetrievedExperience(experience=experiences[i], score=float(scores[i]))
+        for i in top_idx.tolist()
+    ]
