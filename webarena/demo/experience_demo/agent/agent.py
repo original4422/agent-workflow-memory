@@ -322,7 +322,7 @@ class ExperienceDemoAgentArgs(AbstractAgentArgs):
     obs_mode: str = "axtree"  # axtree|html|both
     max_retry: int = 5
     max_obs_chars: int = 8000
-    max_history_turns: int = 4
+    max_history_turns: int = 100
     log_dir: str = ""
 
     def make_agent(self) -> Agent:

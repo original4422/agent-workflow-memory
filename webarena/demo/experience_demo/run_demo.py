@@ -198,7 +198,7 @@ def _run_once(
         obs_mode=obs_mode,
         max_retry=5,
         max_obs_chars=8000,
-        max_history_turns=4,
+        max_history_turns=100,
         log_dir="",  # filled after prepare
     )
 
