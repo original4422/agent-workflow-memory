@@ -27,6 +27,7 @@ def build_system_prompt(
     goal: str,
     action_space_hint: str,
     retrieved_experiences_content: Optional[List[str]] = None,
+    think_prompt: bool = True,
 ) -> str:
     """Build the system prompt for one episode."""
     exp_block = ""
@@ -36,19 +37,37 @@ def build_system_prompt(
         )
         exp_block = f"\n\n# Retrieved Experiences (use as rules/shortcuts)\n{joined}\n"
 
-    return (
-        "# Instructions\n"
-        "You are controlling a web browser via a restricted high-level action language.\n"
-        "Your output will be parsed and executed by a program.\n\n"
-        "## Critical formatting rules\n"
-        "- Output ONLY valid Python-like function call(s) from the action space.\n"
-        "- Do NOT add explanations, markdown, or extra text.\n"
-        "- Prefer a single action per step.\n"
-        "- To finish and submit the final answer, use send_msg_to_user(<answer>).\n\n"
-        f"# Goal\n{goal}\n\n"
-        f"# Action Space\n{action_space_hint}\n"
-        + exp_block
-    )
+    if think_prompt:
+        return (
+            "# Instructions\n"
+            "You are controlling a web browser via a restricted high-level action language.\n"
+            "Your output will be parsed and executed by a program.\n\n"
+            "## Output format (MANDATORY)\n"
+            "- Provide a short rationale (2-5 lines) inside <think>...</think>.\n"
+            "- Provide the action on the LAST LINE, wrapped as: <action>YOUR_ACTION_HERE</action>.\n"
+            "- Do NOT use markdown.\n\n"
+            "## Action rules\n"
+            "- Output a single best next action per step.\n"
+            "- To finish and submit the final answer, use send_msg_to_user(<answer>).\n\n"
+            f"# Goal\n{goal}\n\n"
+            f"# Action Space\n{action_space_hint}\n"
+            + exp_block
+        )
+    else:
+        return (
+            "# Instructions\n"
+            "You are controlling a web browser via a restricted high-level action language.\n"
+            "Your output will be parsed and executed by a program.\n\n"
+            "## Output format (MANDATORY)\n"
+            "- Provide the action on the LAST LINE, wrapped as: <action>YOUR_ACTION_HERE</action>.\n"
+            "- Do NOT add explanations, markdown, or extra text.\n\n"
+            "## Action rules\n"
+            "- Output a single best next action per step.\n"
+            "- To finish and submit the final answer, use send_msg_to_user(<answer>).\n\n"
+            f"# Goal\n{goal}\n\n"
+            f"# Action Space\n{action_space_hint}\n"
+            + exp_block
+        )
 
 
 def build_user_prompt(

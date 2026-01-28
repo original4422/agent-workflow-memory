@@ -6,7 +6,21 @@ from typing import Optional, Tuple
 from browsergym.core.action.base import AbstractActionSet
 
 
-_CODE_FENCE_RE = re.compile(r"```(?:python)?\s*(.*?)\s*```", re.DOTALL | re.IGNORECASE)
+_ACTION_TAG_RE = re.compile(r"<action>(.*?)</action>", re.DOTALL | re.IGNORECASE)
+
+
+def _extract_from_action_tag(raw: str) -> str:
+    m = _ACTION_TAG_RE.search(raw)
+    if not m:
+        return ""
+    content = (m.group(1) or "").strip()
+    if not content:
+        return ""
+    # Support both inline (<action>click('1')</action>) and block forms.
+    lines = [ln.strip() for ln in content.splitlines() if ln.strip()]
+    if not lines:
+        return ""
+    return lines[-1]
 
 
 def extract_action_text(raw: str) -> str:
@@ -17,19 +31,12 @@ def extract_action_text(raw: str) -> str:
     if not raw:
         return ""
 
-    m = _CODE_FENCE_RE.search(raw)
-    if m:
-        raw = m.group(1).strip()
+    # Highest priority: explicit <action>...</action> wrapper.
+    tagged = _extract_from_action_tag(raw)
+    if tagged:
+        return tagged
 
-    # If the model returned multiple lines, prefer the first non-empty line that looks like a call.
-    for line in raw.splitlines():
-        s = line.strip()
-        if not s:
-            continue
-        if "(" in s and ")" in s:
-            return s
-
-    return raw.splitlines()[0].strip() if raw.splitlines() else ""
+    return ""
 
 
 def validate_action(action_set: AbstractActionSet, action_text: str) -> Tuple[bool, Optional[str]]:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -32,6 +33,19 @@ def _clip(text: str, max_chars: int) -> str:
     head = text[: max_chars // 2]
     tail = text[-max_chars // 2 :]
     return head + "\n...<clipped>...\n" + tail
+
+
+def _extract_think_text(raw: str) -> str:
+    """Extract <think>...</think> content from the LLM output.
+
+    If the tag is missing, returns empty string.
+    """
+    if not raw:
+        return ""
+    m = re.search(r"<think>(.*?)</think>", str(raw), flags=re.IGNORECASE | re.DOTALL)
+    if not m:
+        return ""
+    return m.group(1).strip()
 
 
 class LLMClient:
@@ -68,6 +82,7 @@ class ExperienceDemoAgent(Agent):
         self,
         model_provider: str,
         model_name: str,
+        think_prompt: bool,
         use_experience: bool,
         top_k: int,
         experiences_path: Path,
@@ -82,6 +97,7 @@ class ExperienceDemoAgent(Agent):
 
         self.model_provider = model_provider
         self.model_name = model_name
+        self.think_prompt = think_prompt
         self.use_experience = use_experience
         self.top_k = top_k
         self.experiences_path = experiences_path
@@ -186,7 +202,12 @@ class ExperienceDemoAgent(Agent):
         )
         retrieved = self._ensure_retrieval(goal)
         retrieved_contents = [r.experience.content for r in retrieved]
-        return build_system_prompt(goal=goal, action_space_hint=action_space_hint, retrieved_experiences_content=retrieved_contents)
+        return build_system_prompt(
+            goal=goal,
+            action_space_hint=action_space_hint,
+            retrieved_experiences_content=retrieved_contents,
+            think_prompt=self.think_prompt,
+        )
 
     def _chat(self, system_prompt: str, user_prompt: str) -> str:
         """Call the chat completion API with history."""
@@ -260,7 +281,7 @@ class ExperienceDemoAgent(Agent):
             # Ask for a corrected action next retry (keep it minimal; no chain-of-thought)
             correction = (
                 "Your previous output was not a valid action. "
-                "Output ONLY one valid action function call from the action space. "
+                "Output ONLY one valid action wrapped as <action>...</action> on the last line. "
                 f"Parsing error: {error}"
             )
             self._push_history(prompt_bundle.user, raw)
@@ -274,6 +295,8 @@ class ExperienceDemoAgent(Agent):
             action_valid, error = validate_action(self.action_set, action_text)
 
         self._push_history(prompt_bundle.user, raw)
+
+        think_text = _extract_think_text(raw)
 
         agent_info: Dict[str, Any] = {
             "llm_output": raw,
@@ -289,6 +312,9 @@ class ExperienceDemoAgent(Agent):
             ],
             "chat_messages": [m["content"] for m in ([{"role": "system", "content": self._system_prompt}] + self._chat_history)],
         }
+
+        if think_text:
+            agent_info["think"] = think_text
 
         if self._trace:
             self._trace.log_step(
@@ -315,6 +341,7 @@ class ExperienceDemoAgentArgs(AbstractAgentArgs):
     """Arguments for constructing an `ExperienceDemoAgent`."""
     model_provider: str = "cloudgpt"
     model_name: str = "gpt-4.1-20250414"
+    think_prompt: bool = True
     use_experience: bool = False
     top_k: int = 3
     embedding_model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
@@ -332,6 +359,7 @@ class ExperienceDemoAgentArgs(AbstractAgentArgs):
         return ExperienceDemoAgent(
             model_provider=self.model_provider,
             model_name=self.model_name,
+            think_prompt=self.think_prompt,
             use_experience=self.use_experience,
             top_k=self.top_k,
             experiences_path=experiences_path,
