@@ -7,6 +7,12 @@
 
 对比两种模式在同一 WebArena 任务上的成功率，并产出可复盘的 trace 与实验报告。
 
+## 架构讲解资料（Slides / Diagrams）
+
+- 精简版（<=15 页）：`slide/slides_compact.md`（Marp）
+- 详细版：`slide/slides.md`（Marp）
+- Mermaid 框图 + 时序图：`slide/architecture_diagrams.md`
+
 ## 代码规范（Code Style）
 
 - Python 代码统一使用 **4 空格缩进**（不使用 Tab）。
@@ -28,7 +34,15 @@ myenv/webarena/bin/python webarena/demo/experience_demo/run_demo.py --use_experi
 
 # suite: baseline N runs + with-exp N runs, writes report.md/report.json
 myenv/webarena/bin/python webarena/demo/experience_demo/run_demo.py --suite true --n_runs 3 --top_k 3
+
+# disable rationale (force action-only outputs; still wrapped in <action>...</action>)
+myenv/webarena/bin/python webarena/demo/experience_demo/run_demo.py --think_prompt false
 ```
+
+`--think_prompt` 默认是 `true`：会要求模型输出简短 rationale（2-5 行）并把最终动作放在最后一行，格式为 `<action>YOUR_ACTION</action>`。
+如果你希望维持“只输出 action、不要解释”的模式，设置 `--think_prompt false`（此时不输出 `<think>`，但仍要求 `<action>` 包裹最终动作）。
+
+当 `--think_prompt true` 时，模型会被要求输出 `<think>...</think>`；demo 会把该段内容写入 `agent_info["think"]`，从而在 BrowserGym 的 `experiment.log` / 终端 INFO 日志中（`browsergym.experiments.loop`）在 `action:` 之前显示出来。
 
 如果你第一次运行就报错，优先看下方的“运行前置条件（必须）”和“常见问题”。
 

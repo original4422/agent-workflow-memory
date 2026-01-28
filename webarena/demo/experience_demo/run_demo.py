@@ -44,6 +44,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--task_config_path", type=str, default=str(Path(__file__).resolve().parents[2] / "config_files" / "test.raw.json"))
     p.add_argument("--model_provider", type=str, default="cloudgpt")
     p.add_argument("--model_name", type=str, default="gpt-4.1-20250414")
+    p.add_argument("--think_prompt", type=str2bool, default=True, help="If true, ask the model to include a short rationale and wrap the final action as <action>...</action>.")
     p.add_argument("--headless", type=str2bool, default=True)
     p.add_argument("--slow_mo", type=int, default=30)
     p.add_argument("--max_steps", type=int, default=30)
@@ -146,6 +147,7 @@ def _run_once(
     task_name: str,
     model_provider: str,
     model_name: str,
+    think_prompt: bool,
     headless: bool,
     slow_mo: int,
     max_steps: int,
@@ -164,6 +166,7 @@ def _run_once(
         task_name: Task name (e.g., "webarena.1").
         model_provider: LLM provider name (e.g., "cloudgpt").
         model_name: Deployed model name.
+        think_prompt: Whether to ask the model for a short rationale and <action>...</action> output.
         headless: Whether to run the browser in headless mode.
         slow_mo: Playwright slow-mo delay in milliseconds.
         max_steps: Max environment steps.
@@ -191,6 +194,7 @@ def _run_once(
     agent_args = ExperienceDemoAgentArgs(
         model_provider=model_provider,
         model_name=model_name,
+        think_prompt=think_prompt,
         use_experience=use_experience,
         top_k=top_k,
         embedding_model_name=embedding_model,
@@ -292,6 +296,7 @@ def main() -> None:
                         task_name=args.task_name,
                         model_provider=args.model_provider,
                         model_name=args.model_name,
+                        think_prompt=args.think_prompt,
                         headless=args.headless,
                         slow_mo=args.slow_mo,
                         max_steps=args.max_steps,
@@ -311,6 +316,7 @@ def main() -> None:
                 task_name=args.task_name,
                 model_provider=args.model_provider,
                 model_name=args.model_name,
+                think_prompt=args.think_prompt,
                 headless=args.headless,
                 slow_mo=args.slow_mo,
                 max_steps=args.max_steps,
